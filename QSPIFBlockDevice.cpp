@@ -73,11 +73,11 @@
 #define IS_MEM_READY_MAX_RETRIES 10000
 
 // Debug Printouts
-#define QSPIF_DEBUG_ERROR     1
+#define QSPIF_DEBUG_ERROR   1
 #define QSPIF_DEBUG_WARNING 2
-#define QSPIF_DEBUG_INFO     3
-#define QSPIF_DEBUG_DEBUG     4
-#define QSPIF_DEBUG_TRACE     5
+#define QSPIF_DEBUG_INFO    3
+#define QSPIF_DEBUG_DEBUG   4
+#define QSPIF_DEBUG_TRACE   5
 
 namespace mbed {
 
@@ -98,11 +98,12 @@ enum qspif_default_instructions {
     QSPIF_RDID = 0x9f, // Read Manufacturer and JDEC Device ID
 };
 
-#define QSPIF_ENABLE_LOGS 1
+// Remove Remark To Enalbe Logs
+//#define QSPIF_ENABLE_LOGS 1
 
 #ifdef QSPIF_ENABLE_LOGS
 
-#define QSPIF_DEFAULT_DEBUG_LEVEL  QSPIF_DEBUG_INFO
+#define QSPIF_DEFAULT_DEBUG_LEVEL  QSPIF_DEBUG_WARNING
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
