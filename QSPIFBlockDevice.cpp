@@ -116,7 +116,7 @@ enum qspif_default_instructions {
     	}\
     }
 #else
-#define QSPIF_LOG(level,...)  
+#define QSPIF_LOG(level,...)
 #endif //QSPIF_ENABLE_LOGS
 
 // Mutex is used for some QSPI Driver commands that must be done sequentially with no other commands in between
@@ -228,7 +228,7 @@ int QSPIFBlockDevice::init()
 
     // Configure  BUS Mode to 1_1_1 for all commands other than Read
     _qspiConfiureFormat(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
-                         QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
+                        QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
 
 
     _is_initialized = true;
@@ -275,8 +275,8 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
         _inst_width, //Bus width for Instruction phase
         _address_width, //Bus width for Address phase
         _address_size,
-		QSPI_CFG_BUS_SINGLE, //Bus width for Alt phase
-		QSPI_CFG_ALT_SIZE_8,
+        QSPI_CFG_BUS_SINGLE, //Bus width for Alt phase
+        QSPI_CFG_ALT_SIZE_8,
         _data_width, //Bus width for Data phase
         _dummy_and_mode_cycles);
 
@@ -287,7 +287,7 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
 
     // All commands other than Read use default 1-1-1 Bus mode (Program/Erase are constrained by flash memory performance less than that of the bus)
     _qspiConfiureFormat(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
-                         QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
+                        QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
 
     _mutex->unlock();
     return status;
@@ -312,7 +312,7 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
 
         // Write on _pageSizeBytes boundaries (Default 256 bytes a page)
         offset = addr % _pageSizeBytes;
-        chunk = (offset + size < _pageSizeBytes) ? size : (_pageSizeBytes-offset);
+        chunk = (offset + size < _pageSizeBytes) ? size : (_pageSizeBytes - offset);
         writtenBytes = chunk;
 
         _mutex->lock();
@@ -395,7 +395,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
                   addr, size, curEraseInst, chunk);
 
         QSPIF_LOG(QSPIF_DEBUG_DEBUG, " Debug: erase - Region: %d, Type:%d",
-                          region, type);
+                  region, type);
 
         _mutex->lock();
 
@@ -451,19 +451,19 @@ Exit_Point:
 
 bd_size_t QSPIFBlockDevice::get_read_size() const
 {
-	// Assuming all devices support 1byte read granularity
+    // Assuming all devices support 1byte read granularity
     return QSPIF_DEFAULT_READ_SIZE;
 }
 
 bd_size_t QSPIFBlockDevice::get_program_size() const
 {
-	// Assuming all devices support 1byte program granularity
+    // Assuming all devices support 1byte program granularity
     return QSPIF_DEFAULT_PROG_SIZE;
 }
 
 bd_size_t QSPIFBlockDevice::get_erase_size() const
 {
-	// return minimal erase size supported by all regions (0 if none exists)
+    // return minimal erase size supported by all regions (0 if none exists)
     return _minCommonEraseSize;
 }
 
@@ -636,7 +636,7 @@ int QSPIFBlockDevice::_sfdpParseSFDPHeaders(uint32_t& basic_table_addr, size_t& 
 
     // Set 1-1-1 bus mode for SFDP header parsing
     _qspiConfiureFormat(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
-                         QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 8);
+                        QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 8);
 
     qspi_status_t status = _qspiSendReadCommand(QSPIF_SFDP, (char *)sfdp_header, addr /*address*/, data_length);
     if (status != QSPI_STATUS_OK) {
@@ -861,7 +861,7 @@ int QSPIFBlockDevice::_sfdpSetQuadEnabled(uint8_t *basicParamTablePtr)
 
 int QSPIFBlockDevice::_sfdpDetectPageSize(uint8_t *basicParamTablePtr)
 {
-	// Page Size is specified by 4 Bits (N), calculated by 2^N
+    // Page Size is specified by 4 Bits (N), calculated by 2^N
     int page2PowerSize = ( (int)basicParamTablePtr[QSPIF_BASIC_PARAM_TABLE_PAGE_SIZE_BYTE]) >> 4;
     int pageSize = localMathPower(2, page2PowerSize);
     QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _detectPageSize - Page Size: %d", pageSize);
@@ -883,9 +883,10 @@ int QSPIFBlockDevice::_sfdpDetectEraseTypesInstAndSize(uint8_t *basicParamTableP
     // Loop Erase Types 1-4
     for (int i_ind = 0; i_ind < 4; i_ind++) {
         eraseTypeInstArr[i_ind] = 0xff; //0xFF default for unsupported type
-        eraseTypeSizeArr[i_ind] = localMathPower(2, basicParamTablePtr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_SIZE_BYTE + 2 * i_ind]); // Size given as 2^N
+        eraseTypeSizeArr[i_ind] = localMathPower(2,
+                                  basicParamTablePtr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_SIZE_BYTE + 2 * i_ind]); // Size given as 2^N
         QSPIF_LOG(QSPIF_DEBUG_INFO, "DEBUG: Erase Type(A) %d - Inst: 0x%xh, Size: %d", (i_ind + 1), eraseTypeInstArr[i_ind],
-                     eraseTypeSizeArr[i_ind]);
+                  eraseTypeSizeArr[i_ind]);
         if (eraseTypeSizeArr[i_ind] > 1) {
             // if size==1 type is not supported
             eraseTypeInstArr[i_ind] = basicParamTablePtr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_BYTE + 2 * i_ind];
@@ -1017,7 +1018,7 @@ int QSPIFBlockDevice::_sfdpDetectBestBusReadMode(uint8_t *basicParamTablePtr, bo
 
 int QSPIFBlockDevice::_resetFlashMem()
 {
-	// Perform Soft Reset of the Device prior to initialization
+    // Perform Soft Reset of the Device prior to initialization
     int status = 0;
     char status_value[2] = {0};
     QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: _resetFlashMem:\n");
@@ -1061,7 +1062,7 @@ int QSPIFBlockDevice::_resetFlashMem()
 
 bool QSPIFBlockDevice::_isMemReady()
 {
-	// Check Status Register Busy Bit to Verify the Device isn't Busy
+    // Check Status Register Busy Bit to Verify the Device isn't Busy
     char status_value[2];
     int retries = 0;
     bool memReady = true;
@@ -1100,7 +1101,7 @@ int QSPIFBlockDevice::_setWriteEnable()
 /*********************************************/
 int QSPIFBlockDevice::_utilsFindAddrRegion(int offset)
 {
-	 //Find the region to which the given offset belong to
+    //Find the region to which the given offset belong to
     if ((offset > (int)_deviceSizeBytes) || (_regions_count == 0)) {
         return -1;
     }
@@ -1191,7 +1192,7 @@ qspi_status_t QSPIFBlockDevice::_qspiSendProgramCommand(unsigned int progInst, c
 
 qspi_status_t QSPIFBlockDevice::_qspiSendEraseCommand(unsigned int eraseInst, bd_addr_t addr, bd_size_t size)
 {
-	// Send Erase Instruction command to driver
+    // Send Erase Instruction command to driver
     qspi_status_t result = QSPI_STATUS_OK;
 
     QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: Inst: 0x%xh, addr: %llu, size: %llu", eraseInst, addr, size);
@@ -1215,7 +1216,7 @@ qspi_status_t QSPIFBlockDevice::_qspiSendEraseCommand(unsigned int eraseInst, bd
 qspi_status_t QSPIFBlockDevice::_qspiSendGeneralCommand(unsigned int instruction, bd_addr_t addr, const char *tx_buffer,
         size_t tx_length, const char *rx_buffer, size_t rx_length)
 {
-	// Send a general command Instruction to driver
+    // Send a general command Instruction to driver
     qspi_status_t status = _qspi.command_transfer(instruction, (int)addr, tx_buffer, tx_length, rx_buffer, rx_length);
 
     if (QSPI_STATUS_OK != status) {
@@ -1230,7 +1231,7 @@ qspi_status_t QSPIFBlockDevice::_qspiConfiureFormat(qspi_bus_width_t inst_width,
         qspi_address_size_t address_size, qspi_bus_width_t alt_width, qspi_alt_size_t alt_size, qspi_bus_width_t data_width,
         int dummy_cycles)
 {
-	// Configure QSPI driver Bus format
+    // Configure QSPI driver Bus format
     _qspi.configure_format(inst_width, address_width, address_size, alt_width, alt_size, data_width, dummy_cycles);
 
     return QSPI_STATUS_OK;
@@ -1242,7 +1243,7 @@ qspi_status_t QSPIFBlockDevice::_qspiConfiureFormat(qspi_bus_width_t inst_width,
 /*********************************************/
 int localMathPower(int base, int exp)
 {
-	// Integer X^Y function, used to calculate size fields given in 2^N format
+    // Integer X^Y function, used to calculate size fields given in 2^N format
     int result = 1;
     while (exp) {
         result *= base;
