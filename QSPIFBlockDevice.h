@@ -157,76 +157,76 @@ private:
     /*   Calls to QSPI Driver APIs  */
     /********************************/
     // Send Program => Write command to Driver
-    qspi_status_t _qspiSendProgramCommand(unsigned int progInstruction, const void *buffer, bd_addr_t addr,
+    qspi_status_t _qspi_send_program_command(unsigned int prog_instruction, const void *buffer, bd_addr_t addr,
                                           bd_size_t *size);
 
     // Send Read command to Driver
-    qspi_status_t _qspiSendReadCommand(unsigned int readInstruction, void *buffer, bd_addr_t addr, bd_size_t size);
+    qspi_status_t _qspi_send_read_command(unsigned int read_instruction, void *buffer, bd_addr_t addr, bd_size_t size);
 
     // Send Erase Instruction using command_transfer command to Driver
-    qspi_status_t _qspiSendEraseCommand(unsigned int eraseInstruction, bd_addr_t addr, bd_size_t size);
+    qspi_status_t _qspi_send_erase_command(unsigned int erase_instruction, bd_addr_t addr, bd_size_t size);
 
     // Send Generic command_transfer command to Driver
-    qspi_status_t _qspiSendGeneralCommand(unsigned int instructionint, bd_addr_t addr, const char *tx_buffer,
+    qspi_status_t _qspi_send_general_command(unsigned int instruction_int, bd_addr_t addr, const char *tx_buffer,
                                           size_t tx_length, const char *rx_buffer, size_t rx_length);
 
     // Send Bus configure_format command to Driver
-    qspi_status_t _qspiConfiureFormat(qspi_bus_width_t inst_width, qspi_bus_width_t address_width,
+    qspi_status_t _qspi_configure_format(qspi_bus_width_t inst_width, qspi_bus_width_t address_width,
                                       qspi_address_size_t address_size, qspi_bus_width_t alt_width, qspi_alt_size_t alt_size, qspi_bus_width_t data_width,
                                       int dummy_cycles);
 
     // Send set_frequency command to Driver
-    qspi_status_t _qspiSetFrequency(int freq);
+    qspi_status_t _qsp_set_frequency(int freq);
     /********************************/
 
 
     // Soft Reset Flash Memory
-    int _resetFlashMem();
+    int _reset_flash_mem();
 
     // Configure Write Enable in Status Register
-    int _setWriteEnable();
+    int _set_write_enable();
 
     // Wait on status register until write not-in-progress
-    bool _isMemReady();
+    bool _is_mem_ready();
 
 
     /* SFDP Detection and Parsing Functions */
     /****************************************/
     // Parse SFDP Headers and retrieve Basic Param and Sector Map Tables (if exist)
-    int _sfdpParseSFDPHeaders(uint32_t& basic_table_addr, size_t& basic_table_size,
+    int _sfdp_parse_sfdp_headers(uint32_t& basic_table_addr, size_t& basic_table_size,
                               uint32_t& sector_map_table_addr, size_t& sector_map_table_size);
 
     // Parse and Detect required Basic Parameters from Table
-    int _sfdpParseBasicParamTable(uint32_t basic_table_addr, size_t basic_table_size);
+    int _sfdp_parse_basic_param_table(uint32_t basic_table_addr, size_t basic_table_size);
 
     // Parse and read information required by Regions Secotr Map
-    int _sfdpParseSectorMapTable(uint32_t sector_map_table_addr, size_t sector_map_table_size);
+    int _sfdp_parse_sector_map_table(uint32_t sector_map_table_addr, size_t sector_map_table_size);
 
     // Detect fastest read Bus mode supported by device
-    int _sfdpDetectBestBusReadMode(uint8_t *basicParamTablePtr, bool& setQuadEnable, bool& isQPIMode,
-                                   unsigned int& readInst);
+    int _sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table_ptr, bool& set_quad_enable, bool& is_qpi_mode,
+                                   unsigned int& read_inst);
 
     // Enable Quad mode if supported (1-1-4, 1-4-4, 4-4-4 bus modes)
-    int _sfdpSetQuadEnabled(uint8_t *basicParamTablePtr);
+    int _sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr);
 
     // Enable QPI mode (4-4-4) is supported
-    int _sfdpSetQPIEnabled(uint8_t *basicParamTablePtr);
+    int _sfdp_set_qpi_enabled(uint8_t *basic_param_table_ptr);
 
     // Set Page size for program
-    int _sfdpDetectPageSize(uint8_t *basicParamTablePtr);
+    int _sfdp_detect_page_size(uint8_t *basic_param_table_ptr);
 
     // Detect all supported erase types
-    int _sfdpDetectEraseTypesInstAndSize(uint8_t *basicParamTablePtr, unsigned int& erase4KInst,
-                                         unsigned int *eraseTypeInstArr, unsigned int *eraseTypeSizeArr);
+    int _sfdp_detect_erase_types_inst_and_size(uint8_t *basic_param_table_ptr, unsigned int& erase4k_inst,
+                                         unsigned int *erase_type_inst_arr, unsigned int *erase_type_size_arr);
 
     /* Utilities Functions */
     /***********************/
     // Find the region to which the given offset belong to
-    int _utilsFindAddrRegion(int offset);
+    int _utils_find_addr_region(int offset);
 
     // Iterate on all supported Erase Types of the Region to which the offset belong to.
     // Iterates from highest type to lowest
-    int _utilsIterateNextLargestEraseType(uint8_t& bitfield, int size, int offset, int boundry);
+    int _utils_iterate_next_largest_erase_type(uint8_t& bitfield, int size, int offset, int boundry);
 
 private:
     // Internal Members
@@ -240,14 +240,14 @@ private:
     static SingletonPtr<PlatformMutex> _mutex;
 
     // Command Instructions
-    unsigned int _readInstruction;
-    unsigned int _progInstruction;
-    unsigned int _eraseInstruction;
-    unsigned int _erase4KInst;  // Legacy 4K erase instruction (default 0x20h)
+    unsigned int _read_instruction;
+    unsigned int _prog_instruction;
+    unsigned int _erase_instruction;
+    unsigned int _erase4k_inst;  // Legacy 4K erase instruction (default 0x20h)
 
     // Up To 4 Erase Types are supported by SFDP (each with its own command Instruction and Size)
-    unsigned int _eraseTypeInstArr[MAX_NUM_OF_ERASE_TYPES];
-    unsigned int _eraseTypeSizeArr[MAX_NUM_OF_ERASE_TYPES];
+    unsigned int _erase_type_inst_arr[MAX_NUM_OF_ERASE_TYPES];
+    unsigned int _erase_type_size_arr[MAX_NUM_OF_ERASE_TYPES];
 
     // Sector Regions Map
     int _regions_count; //number of regions
@@ -255,10 +255,10 @@ private:
     int _region_high_boundary[QSPIF_MAX_REGIONS]; //region high address offset boundary
     //Each Region can support a bit combination of any of the 4 Erase Types
     uint8_t _region_erase_types_bitfield[QSPIF_MAX_REGIONS];
-    int _minCommonEraseSize; // minimal common erase size for all regions (0 if none exists)
+    int _min_common_erase_size; // minimal common erase size for all regions (0 if none exists)
 
-    int _pageSizeBytes; // Page size - 256 Bytes default
-    bd_size_t _deviceSizeBytes;
+    int _page_size_bytes; // Page size - 256 Bytes default
+    bd_size_t _device_size_bytes;
 
     // Bus speed configuration
     qspi_bus_width_t _inst_width; //Bus width for Instruction phase
