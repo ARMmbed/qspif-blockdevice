@@ -34,6 +34,17 @@ enum qspif_bd_error {
 
 };
 
+
+/** Enum qspif polarity mode
+ *
+ *  @enum qspif_polarity_mode
+ */
+enum qspif_polarity_mode {
+	QSPIF_POLARITY_MODE_0 = 0, /* CPOL=0, CPHA=0 */
+	QSPIF_POLARITY_MODE_1      /* CPOL=1, CPHA=1 */
+};
+
+
 #define QSPIF_MAX_REGIONS	10
 #define MAX_NUM_OF_ERASE_TYPES 4
 
@@ -47,12 +58,12 @@ public:
      *  @param io3 4th IO pin used for sending/receiving data during data phase of a transaction
      *  @param sclk QSPI Clock pin
      *  @param csel QSPI chip select pin
-     *  @param clock_mode specifies the QSPI Clock Polarity mode(Mode=0 uses CPOL=0, CPHA=0, Mode=1 uses CPOL=1, CPHA=1)
+     *  @param clock_mode specifies the QSPI Clock Polarity mode (QSPIF_POLARITY_MODE_0/QSPIF_POLARITY_MODE_1)
      *         default value = 0
      *  @param freq Clock frequency of the QSPI bus (defaults to 40MHz)
      *
      */
-    QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel, int clock_mode,
+    QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel, qspif_polarity_mode clock_mode,
                      int freq = 40000000);
 
 
@@ -135,13 +146,12 @@ public:
      */
     virtual bd_size_t get_erase_size() const;
 
-    /** Get the size of a eraseable block
+    /** Get the size of minimal eraseable sector size of given address
      *
-     *  @param addr     Address of block queried for erase sector size
+     *  @param addr     Any address within block queried for erase sector size (can be any address within flash size offset)
      *  @return         Size of minimal erase sector size, in given address region, in bytes
      *  @note Must be a multiple of the program size
      */
-    //virtual bd_size_t get_erase_size(bd_addr_t addr) const;
     virtual bd_size_t get_erase_size(bd_addr_t addr);
 
     /** Get the total size of the underlying device
