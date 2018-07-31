@@ -40,8 +40,8 @@ enum qspif_bd_error {
  *  @enum qspif_polarity_mode
  */
 enum qspif_polarity_mode {
-	QSPIF_POLARITY_MODE_0 = 0, /* CPOL=0, CPHA=0 */
-	QSPIF_POLARITY_MODE_1      /* CPOL=1, CPHA=1 */
+    QSPIF_POLARITY_MODE_0 = 0, /* CPOL=0, CPHA=0 */
+    QSPIF_POLARITY_MODE_1      /* CPOL=1, CPHA=1 */
 };
 
 
@@ -63,7 +63,8 @@ public:
      *  @param freq Clock frequency of the QSPI bus (defaults to 40MHz)
      *
      */
-    QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel, qspif_polarity_mode clock_mode,
+    QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
+                     qspif_polarity_mode clock_mode,
                      int freq = 40000000);
 
 
@@ -168,7 +169,7 @@ private:
     /********************************/
     // Send Program => Write command to Driver
     qspi_status_t _qspi_send_program_command(unsigned int prog_instruction, const void *buffer, bd_addr_t addr,
-                                          bd_size_t *size);
+            bd_size_t *size);
 
     // Send Read command to Driver
     qspi_status_t _qspi_send_read_command(unsigned int read_instruction, void *buffer, bd_addr_t addr, bd_size_t size);
@@ -178,12 +179,12 @@ private:
 
     // Send Generic command_transfer command to Driver
     qspi_status_t _qspi_send_general_command(unsigned int instruction_int, bd_addr_t addr, const char *tx_buffer,
-                                          size_t tx_length, const char *rx_buffer, size_t rx_length);
+            size_t tx_length, const char *rx_buffer, size_t rx_length);
 
     // Send Bus configure_format command to Driver
     qspi_status_t _qspi_configure_format(qspi_bus_width_t inst_width, qspi_bus_width_t address_width,
-                                      qspi_address_size_t address_size, qspi_bus_width_t alt_width, qspi_alt_size_t alt_size, qspi_bus_width_t data_width,
-                                      int dummy_cycles);
+                                         qspi_address_size_t address_size, qspi_bus_width_t alt_width, qspi_alt_size_t alt_size, qspi_bus_width_t data_width,
+                                         int dummy_cycles);
 
     // Send set_frequency command to Driver
     qspi_status_t _qsp_set_frequency(int freq);
@@ -204,7 +205,7 @@ private:
     /****************************************/
     // Parse SFDP Headers and retrieve Basic Param and Sector Map Tables (if exist)
     int _sfdp_parse_sfdp_headers(uint32_t& basic_table_addr, size_t& basic_table_size,
-                              uint32_t& sector_map_table_addr, size_t& sector_map_table_size);
+                                 uint32_t& sector_map_table_addr, size_t& sector_map_table_size);
 
     // Parse and Detect required Basic Parameters from Table
     int _sfdp_parse_basic_param_table(uint32_t basic_table_addr, size_t basic_table_size);
@@ -214,7 +215,7 @@ private:
 
     // Detect fastest read Bus mode supported by device
     int _sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table_ptr, bool& set_quad_enable, bool& is_qpi_mode,
-                                   unsigned int& read_inst);
+                                        unsigned int& read_inst);
 
     // Enable Quad mode if supported (1-1-4, 1-4-4, 4-4-4 bus modes)
     int _sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr);
@@ -227,7 +228,7 @@ private:
 
     // Detect all supported erase types
     int _sfdp_detect_erase_types_inst_and_size(uint8_t *basic_param_table_ptr, unsigned int& erase4k_inst,
-                                         unsigned int *erase_type_inst_arr, unsigned int *erase_type_size_arr);
+            unsigned int *erase_type_inst_arr, unsigned int *erase_type_size_arr);
 
     /* Utilities Functions */
     /***********************/
