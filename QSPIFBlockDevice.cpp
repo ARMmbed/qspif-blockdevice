@@ -130,7 +130,7 @@ int localMathPower(int base, int exp);
 /****************************************/
 
 QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
-								   qspif_polarity_mode clock_mode, int freq)
+                                   qspif_polarity_mode clock_mode, int freq)
     : _qspi(io0, io1, io2, io3, sclk, csel, clock_mode), _device_size_bytes(0)
 {
     _is_initialized = false;
@@ -228,7 +228,7 @@ int QSPIFBlockDevice::init()
 
     // Configure  BUS Mode to 1_1_1 for all commands other than Read
     _qspi_configure_format(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
-                        QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
+                           QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
 
 
     _is_initialized = true;
@@ -287,7 +287,7 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
 
     // All commands other than Read use default 1-1-1 Bus mode (Program/Erase are constrained by flash memory performance less than that of the bus)
     _qspi_configure_format(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
-                        QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
+                           QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
 
     _mutex->unlock();
     return status;
@@ -636,7 +636,7 @@ int QSPIFBlockDevice::_sfdp_parse_sfdp_headers(uint32_t& basic_table_addr, size_
 
     // Set 1-1-1 bus mode for SFDP header parsing
     _qspi_configure_format(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
-                        QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 8);
+                           QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 8);
 
     qspi_status_t status = _qspi_send_read_command(QSPIF_SFDP, (char *)sfdp_header, addr /*address*/, data_length);
     if (status != QSPI_STATUS_OK) {
@@ -884,7 +884,7 @@ int QSPIFBlockDevice::_sfdp_detect_erase_types_inst_and_size(uint8_t *basic_para
     for (int i_ind = 0; i_ind < 4; i_ind++) {
         erase_type_inst_arr[i_ind] = 0xff; //0xFF default for unsupported type
         erase_type_size_arr[i_ind] = localMathPower(2,
-                                  basic_param_table_ptr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_SIZE_BYTE + 2 * i_ind]); // Size given as 2^N
+                                     basic_param_table_ptr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_SIZE_BYTE + 2 * i_ind]); // Size given as 2^N
         QSPIF_LOG(QSPIF_DEBUG_INFO, "DEBUG: Erase Type(A) %d - Inst: 0x%xh, Size: %d", (i_ind + 1), erase_type_inst_arr[i_ind],
                   erase_type_size_arr[i_ind]);
         if (erase_type_size_arr[i_ind] > 1) {
@@ -922,7 +922,8 @@ int QSPIFBlockDevice::_sfdp_detect_erase_types_inst_and_size(uint8_t *basic_para
 }
 
 
-int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table_ptr, bool& set_quad_enable, bool& is_qpi_mode,
+int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table_ptr, bool& set_quad_enable,
+        bool& is_qpi_mode,
         unsigned int& read_inst)
 {
 
@@ -1213,7 +1214,8 @@ qspi_status_t QSPIFBlockDevice::_qspi_send_erase_command(unsigned int eraseInst,
 }
 
 
-qspi_status_t QSPIFBlockDevice::_qspi_send_general_command(unsigned int instruction, bd_addr_t addr, const char *tx_buffer,
+qspi_status_t QSPIFBlockDevice::_qspi_send_general_command(unsigned int instruction, bd_addr_t addr,
+        const char *tx_buffer,
         size_t tx_length, const char *rx_buffer, size_t rx_length)
 {
     // Send a general command Instruction to driver

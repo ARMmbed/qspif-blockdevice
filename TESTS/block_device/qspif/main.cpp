@@ -114,7 +114,8 @@ void test_qspif_random_program_read_erase()
     printf("\nTest Random Program Read Erase Starts..\n");
 
     QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0, MBED_CONF_QSPIF_QSPI_IO1, MBED_CONF_QSPIF_QSPI_IO2,
-                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
+                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0,
+                            MBED_CONF_QSPIF_QSPI_FREQ);
 
     int err = blockD.init();
     TEST_ASSERT_EQUAL(0, err);
@@ -151,7 +152,8 @@ void test_qspif_unaligned_program()
     printf("\nTest Unaligned Program Starts..\n");
 
     QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0, MBED_CONF_QSPIF_QSPI_IO1, MBED_CONF_QSPIF_QSPI_IO2,
-                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
+                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0,
+                            MBED_CONF_QSPIF_QSPI_FREQ);
 
     int err = blockD.init();
     TEST_ASSERT_EQUAL(0, err);
@@ -268,7 +270,8 @@ void test_qspif_multi_threads()
     printf("\nTest Multi Threaded Erase/Program/Read Starts..\n");
 
     QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0, MBED_CONF_QSPIF_QSPI_IO1, MBED_CONF_QSPIF_QSPI_IO2,
-                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
+                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0,
+                            MBED_CONF_QSPIF_QSPI_FREQ);
 
     int err = blockD.init();
     TEST_ASSERT_EQUAL(0, err);
