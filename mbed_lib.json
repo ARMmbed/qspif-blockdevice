@@ -26,7 +26,7 @@
              "QSPI_IO3": "PE_15",
              "QSPI_CLK":  "PE_10",
              "QSPI_CS":   "PE_11",
-             "QSPI_FREQ": "80000000"
+             "QSPI_FREQ": "8000000"
         },
        "DISCO_L476VG": {
              "QSPI_IO0": "PE_12",
