@@ -130,7 +130,7 @@ int localMathPower(int base, int exp);
 /****************************************/
 
 QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
-                                   int clock_mode, int freq)
+								   qspif_polarity_mode clock_mode, int freq)
     : _qspi(io0, io1, io2, io3, sclk, csel, clock_mode), _device_size_bytes(0)
 {
     _is_initialized = false;
