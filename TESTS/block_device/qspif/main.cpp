@@ -1,7 +1,3 @@
-#include "mbed.h"
-
-using namespace mbed;
-
 #include "greentea-client/test_env.h"
 #include "unity.h"
 #include "utest.h"
@@ -12,6 +8,7 @@ using namespace utest::v1;
 
 #define TEST_BLOCK_COUNT 10
 #define TEST_ERROR_MASK 16
+#define QSPIF_TEST_NUM_OF_THREADS 5
 
 const struct {
     const char *name;
@@ -38,6 +35,7 @@ void basic_erase_program_read_test(
     unsigned addrwidth)
 {
     int err = 0;
+    _mutex->lock();
     // Find a random block
     bd_addr_t block = (rand() * block_size) % blockD.size();
 
@@ -46,7 +44,6 @@ void basic_erase_program_read_test(
     unsigned seed = rand();
 
     // Fill with random sequence
-    _mutex->lock();
     srand(seed);
     for (bd_size_t i_ind = 0; i_ind < block_size; i_ind++) {
         write_block[i_ind] = 0xff & rand();
@@ -102,8 +99,15 @@ void basic_erase_program_read_test(
 
     // Check that the data was unmodified
     srand(seed);
+    int val_rand;
     for (bd_size_t i_ind = 0; i_ind < block_size; i_ind++) {
-        TEST_ASSERT_EQUAL(0xff & rand(), read_block[i_ind]);
+        val_rand = rand();
+        if ( (0xff & val_rand) != read_block[i_ind] ) {
+            printf("\n Assert Failed Buf Read - block:size: %llx:%llu \n", block, block_size);
+            printf("\n pos: %llu, exp: %02x, act: %02x, wrt: %02x \n", i_ind, (0xff & val_rand), read_block[i_ind],
+                   write_block[i_ind] );
+        }
+        TEST_ASSERT_EQUAL(0xff & val_rand, read_block[i_ind]);
     }
     _mutex->unlock();
 }
@@ -133,10 +137,15 @@ void test_qspif_random_program_read_erase()
     }
 
     bd_size_t block_size = blockD.get_erase_size();
-    uint8_t *write_block = new uint8_t[block_size];
-    uint8_t *read_block = new uint8_t[block_size];
-    uint8_t *error_mask = new uint8_t[TEST_ERROR_MASK];
     unsigned addrwidth = ceil(log(float(blockD.size() - 1)) / log(float(16))) + 1;
+
+    uint8_t *write_block = new (std::nothrow) uint8_t[block_size];
+    uint8_t *read_block = new (std::nothrow) uint8_t[block_size];
+    uint8_t *error_mask = new (std::nothrow) uint8_t[TEST_ERROR_MASK];
+    if (!write_block || !read_block || !error_mask) {
+        printf("\n Not enough memory for test");
+        goto end;
+    }
 
     for (int b = 0; b < TEST_BLOCK_COUNT; b++) {
         basic_erase_program_read_test(blockD, block_size, write_block, read_block, error_mask, addrwidth);
@@ -144,6 +153,12 @@ void test_qspif_random_program_read_erase()
 
     err = blockD.deinit();
     TEST_ASSERT_EQUAL(0, err);
+
+end:
+    delete[] write_block;
+    delete[] read_block;
+    delete[] error_mask;
+
 }
 
 void test_qspif_unaligned_program()
@@ -171,75 +186,85 @@ void test_qspif_unaligned_program()
     }
 
     bd_size_t block_size = blockD.get_erase_size();
-    uint8_t *write_block = new uint8_t[block_size];
-    uint8_t *read_block = new uint8_t[block_size];
-    uint8_t *error_mask = new uint8_t[TEST_ERROR_MASK];
     unsigned addrwidth = ceil(log(float(blockD.size() - 1)) / log(float(16))) + 1;
 
-
-    bd_addr_t block = (rand() * block_size) % blockD.size() + 15;
-
-    // Use next random number as temporary seed to keep
-    // the address progressing in the pseudorandom sequence
-    unsigned seed = rand();
-
-    // Fill with random sequence
-    srand(seed);
-    for (bd_size_t i_ind = 0; i_ind < block_size; i_ind++) {
-        write_block[i_ind] = 0xff & rand();
+    uint8_t *write_block = new (std::nothrow) uint8_t[block_size];
+    uint8_t *read_block = new (std::nothrow) uint8_t[block_size];
+    uint8_t *error_mask = new (std::nothrow) uint8_t[TEST_ERROR_MASK];
+    if (!write_block || !read_block || !error_mask) {
+        printf("\n Not enough memory for test");
+        goto end;
     }
 
-    // Write, sync, and read the block
-    printf("\ntest  %0*llx:%llu...", addrwidth, block, block_size);
+    {
+        bd_addr_t block = (rand() * block_size) % blockD.size() + 15;
 
-    err = blockD.erase(block, block_size);
-    TEST_ASSERT_EQUAL(0, err);
+        // Use next random number as temporary seed to keep
+        // the address progressing in the pseudorandom sequence
+        unsigned seed = rand();
 
-    err = blockD.program(write_block, block, block_size);
-    TEST_ASSERT_EQUAL(0, err);
+        // Fill with random sequence
+        srand(seed);
+        for (bd_size_t i_ind = 0; i_ind < block_size; i_ind++) {
+            write_block[i_ind] = 0xff & rand();
+        }
 
-    printf("\nwrite %0*llx:%llu ", addrwidth, block, block_size);
-    for (int i_ind = 0; i_ind < 15; i_ind++) {
-        printf("%02x", write_block[block_size - 16 + i_ind]);
-    }
-    printf("...\n");
+        // Write, sync, and read the block
+        printf("\ntest  %0*llx:%llu...", addrwidth, block, block_size);
 
-    err = blockD.read(read_block, block, block_size);
-    TEST_ASSERT_EQUAL(0, err);
+        err = blockD.erase(block, block_size);
+        TEST_ASSERT_EQUAL(0, err);
 
-    printf("read  %0*llx:%llu ", addrwidth, block, block_size);
-    for (int i_ind = 0; i_ind < 15; i_ind++) {
-        printf("%02x", read_block[block_size - 16 + i_ind]);
-    }
-    printf("...\n");
+        err = blockD.program(write_block, block, block_size);
+        TEST_ASSERT_EQUAL(0, err);
 
-    // Find error mask for debugging
-    memset(error_mask, 0, TEST_ERROR_MASK);
-    bd_size_t error_scale = block_size / (TEST_ERROR_MASK * 8);
+        printf("\nwrite %0*llx:%llu ", addrwidth, block, block_size);
+        for (int i_ind = 0; i_ind < 15; i_ind++) {
+            printf("%02x", write_block[block_size - 16 + i_ind]);
+        }
+        printf("...\n");
 
-    srand(seed);
-    for (bd_size_t i_ind = 0; i_ind < TEST_ERROR_MASK * 8; i_ind++) {
-        for (bd_size_t j_ind = 0; j_ind < error_scale; j_ind++) {
-            if ((0xff & rand()) != read_block[i_ind * error_scale + j_ind]) {
-                error_mask[i_ind / 8] |= 1 << (i_ind % 8);
+        err = blockD.read(read_block, block, block_size);
+        TEST_ASSERT_EQUAL(0, err);
+
+        printf("read  %0*llx:%llu ", addrwidth, block, block_size);
+        for (int i_ind = 0; i_ind < 15; i_ind++) {
+            printf("%02x", read_block[block_size - 16 + i_ind]);
+        }
+        printf("...\n");
+
+        // Find error mask for debugging
+        memset(error_mask, 0, TEST_ERROR_MASK);
+        bd_size_t error_scale = block_size / (TEST_ERROR_MASK * 8);
+
+        srand(seed);
+        for (bd_size_t i_ind = 0; i_ind < TEST_ERROR_MASK * 8; i_ind++) {
+            for (bd_size_t j_ind = 0; j_ind < error_scale; j_ind++) {
+                if ((0xff & rand()) != read_block[i_ind * error_scale + j_ind]) {
+                    error_mask[i_ind / 8] |= 1 << (i_ind % 8);
+                }
             }
         }
-    }
 
-    printf("error %0*llx:%llu ", addrwidth, block, block_size);
-    for (int i_ind = 0; i_ind < 16; i_ind++) {
-        printf("%02x", error_mask[i_ind]);
-    }
-    printf("\n");
+        printf("error %0*llx:%llu ", addrwidth, block, block_size);
+        for (int i_ind = 0; i_ind < 16; i_ind++) {
+            printf("%02x", error_mask[i_ind]);
+        }
+        printf("\n");
 
-    // Check that the data was unmodified
-    srand(seed);
-    for (bd_size_t i_ind = 0; i_ind < block_size; i_ind++) {
-        TEST_ASSERT_EQUAL(0xff & rand(), read_block[i_ind]);
-    }
+        // Check that the data was unmodified
+        srand(seed);
+        for (bd_size_t i_ind = 0; i_ind < block_size; i_ind++) {
+            TEST_ASSERT_EQUAL(0xff & rand(), read_block[i_ind]);
+        }
 
-    err = blockD.deinit();
-    TEST_ASSERT_EQUAL(0, err);
+        err = blockD.deinit();
+        TEST_ASSERT_EQUAL(0, err);
+    }
+end:
+    delete[] write_block;
+    delete[] read_block;
+    delete[] error_mask;
 }
 
 
@@ -252,15 +277,24 @@ static void test_qspif_thread_job(void *vBlockD/*, int thread_num*/)
     printf("\n Thread %d Started \n", thread_num);
 
     bd_size_t block_size = blockD->get_erase_size();
-    uint8_t *write_block = new uint8_t[block_size];
-    uint8_t *read_block = new uint8_t[block_size];
-    uint8_t *error_mask = new uint8_t[TEST_ERROR_MASK];
     unsigned addrwidth = ceil(log(float(blockD->size() - 1)) / log(float(16))) + 1;
+
+    uint8_t *write_block = new (std::nothrow) uint8_t[block_size];
+    uint8_t *read_block = new (std::nothrow) uint8_t[block_size];
+    uint8_t *error_mask = new (std::nothrow) uint8_t[TEST_ERROR_MASK];
+    if (!write_block || !read_block || !error_mask) {
+        printf("\n Not enough memory for test");
+        goto end;
+    }
 
     for (int b = 0; b < TEST_BLOCK_COUNT; b++) {
         basic_erase_program_read_test((*blockD), block_size, write_block, read_block, error_mask, addrwidth);
     }
 
+end:
+    delete[] write_block;
+    delete[] read_block;
+    delete[] error_mask;
 
 }
 
@@ -288,26 +322,21 @@ void test_qspif_multi_threads()
         }
     }
 
-    rtos::Thread first_qspif_bd_thread;
-    rtos::Thread second_qspif_bd_thread;
-    rtos::Thread third_qspif_bd_thread;
+    rtos::Thread qspif_bd_thread[QSPIF_TEST_NUM_OF_THREADS];
 
-    osStatus threadStatus = first_qspif_bd_thread.start(test_qspif_thread_job, (void *)&blockD);
-    if (threadStatus != 0) {
-        printf("\n First Thread Start Failed!");
-    }
-    threadStatus = second_qspif_bd_thread.start(test_qspif_thread_job, (void *)&blockD);
-    if (threadStatus != 0) {
-        printf("\n Second Thread Start Failed!");
-    }
-    threadStatus = third_qspif_bd_thread.start(test_qspif_thread_job, (void *)&blockD);
-    if (threadStatus != 0) {
-        printf("\n Second Thread Start Failed!");
+    osStatus threadStatus;
+    int i_ind;
+
+    for (i_ind = 0; i_ind < QSPIF_TEST_NUM_OF_THREADS; i_ind++) {
+        threadStatus = qspif_bd_thread[i_ind].start(test_qspif_thread_job, (void *)&blockD);
+        if (threadStatus != 0) {
+            printf("\n Thread %d Start Failed!", i_ind + 1);
+        }
     }
 
-    first_qspif_bd_thread.join();
-    second_qspif_bd_thread.join();
-    third_qspif_bd_thread.join();
+    for (i_ind = 0; i_ind < QSPIF_TEST_NUM_OF_THREADS; i_ind++) {
+        qspif_bd_thread[i_ind].join();
+    }
 
     err = blockD.deinit();
     TEST_ASSERT_EQUAL(0, err);

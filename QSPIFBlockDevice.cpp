@@ -156,26 +156,33 @@ int QSPIFBlockDevice::init()
 
     uint8_t vendor_device_ids[4];
     size_t data_length = 3;
+    int status = QSPIF_BD_ERROR_OK;
+    uint32_t basic_table_addr = NULL;
+    size_t basic_table_size = 0;
+    uint32_t sector_map_table_addr = NULL;
+    size_t sector_map_table_size = 0;
+    int qspi_status = QSPI_STATUS_OK;
 
     _mutex->lock();
     if (_is_initialized == true) {
-        _mutex->unlock();
-        return 0;
+        goto Exit_Point;
     }
 
     // Soft Reset
     if ( -1 == _reset_flash_mem()) {
         QSPIF_LOG(QSPIF_DEBUG_INFO, "ERROR: init - Unable to initialize flash memory, tests failed\n");
-        return QSPIF_BD_ERROR_DEVICE_ERROR;
+        status = QSPIF_BD_ERROR_DEVICE_ERROR;
+        goto Exit_Point;
     } else {
         QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: Initialize flash memory OK\n");
     }
 
     /* Read Manufacturer ID (1byte), and Device ID (2bytes)*/
-    int status = _qspi_send_read_command(QSPIF_RDID, (char *)vendor_device_ids, 0x0 /*address*/, data_length);
-    if (status != QSPI_STATUS_OK) {
+    qspi_status = _qspi_send_read_command(QSPIF_RDID, (char *)vendor_device_ids, 0x0 /*address*/, data_length);
+    if (qspi_status != QSPI_STATUS_OK) {
         QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Read Vendor ID Failed");
-        return QSPIF_BD_ERROR_DEVICE_ERROR;
+        status = QSPIF_BD_ERROR_DEVICE_ERROR;
+        goto Exit_Point;
     }
 
     switch (vendor_device_ids[0]) {
@@ -184,31 +191,29 @@ int QSPIFBlockDevice::init()
             // enabled for some regions, issue write disable instruction to clear
             _set_write_enable();
             _qspi_send_general_command(QSPIF_WRDI, -1, NULL, 0, NULL, 0);
-
             break;
     }
 
     //Synchronize Device
     if ( false == _is_mem_ready()) {
         QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - _is_mem_ready Failed");
-        return QSPIF_BD_ERROR_READY_FAILED;
+        status = QSPIF_BD_ERROR_READY_FAILED;
+        goto Exit_Point;
     }
 
     /**************************** Parse SFDP Header ***********************************/
-    uint32_t basic_table_addr = NULL;
-    size_t basic_table_size = 0;
-    uint32_t sector_map_table_addr = NULL;
-    size_t sector_map_table_size = 0;
     if ( 0 != _sfdp_parse_sfdp_headers(basic_table_addr, basic_table_size, sector_map_table_addr, sector_map_table_size)) {
         QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Parse SFDP Headers Failed");
-        return QSPIF_BD_ERROR_PARSING_FAILED;
+        status = QSPIF_BD_ERROR_PARSING_FAILED;
+        goto Exit_Point;
     }
 
 
     /**************************** Parse Basic Parameters Table ***********************************/
     if ( 0 != _sfdp_parse_basic_param_table(basic_table_addr, basic_table_size) ) {
         QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Parse Basic Param Table Failed");
-        return QSPIF_BD_ERROR_PARSING_FAILED;
+        status = QSPIF_BD_ERROR_PARSING_FAILED;
+        goto Exit_Point;
     }
 
     /**************************** Parse Sector Map Table ***********************************/
@@ -221,20 +226,21 @@ int QSPIFBlockDevice::init()
                   sector_map_table_size);
         if ( 0 != _sfdp_parse_sector_map_table(sector_map_table_addr, sector_map_table_size) ) {
             QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Parse Sector Map Table Failed");
-            return QSPIF_BD_ERROR_PARSING_FAILED;
+            status = QSPIF_BD_ERROR_PARSING_FAILED;
+            goto Exit_Point;
         }
     }
-
 
     // Configure  BUS Mode to 1_1_1 for all commands other than Read
     _qspi_configure_format(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
                            QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
 
-
     _is_initialized = true;
+
+Exit_Point:
     _mutex->unlock();
 
-    return QSPIF_BD_ERROR_OK;
+    return status;
 }
 
 int QSPIFBlockDevice::deinit()
@@ -303,8 +309,6 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
     uint32_t offset = 0;
     uint32_t chunk = 0;
     bd_size_t writtenBytes = 0;
-
-    static int counter = 0;
 
     QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: program - Buff: 0x%x, addr: %llu, size: %llu", buffer, addr, size);
 
@@ -682,7 +686,7 @@ int QSPIFBlockDevice::_sfdp_parse_sfdp_headers(uint32_t& basic_table_addr, size_
             QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Found Basic Param Table at Table: %d", i_ind + 1);
             basic_table_addr = ( (param_header[6] << 16) | (param_header[5] << 8) | (param_header[4]) );
             // Supporting up to 64 Bytes Table (16 DWORDS)
-            basic_table_size = ((param_header[3] * 4) < SFDP_DEFAULT_BASIC_PARAMS_TABLE_SIZE_BYTES) ? (param_header[11] * 4) : 64;
+            basic_table_size = ((param_header[3] * 4) < SFDP_DEFAULT_BASIC_PARAMS_TABLE_SIZE_BYTES) ? (param_header[3] * 4) : 64;
 
         } else if ((param_header[0] == 81) && (param_header[7] == 0xFF)) {
             // Found Sector Map Table: LSB=0x81, MSB=0xFF
@@ -723,14 +727,14 @@ int QSPIFBlockDevice::_sfdp_set_qpi_enabled(uint8_t *basic_param_table_ptr)
         case 8:
             QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQPIEnabled - set config bit 6 and send command 71h");
             _qspi_send_general_command(0x65, 0x800003, NULL, 0, (char *)config_reg, 1);
-            config_reg[1] |= 0x40; //Set Bit 6
+            config_reg[0] |= 0x40; //Set Bit 6
             _qspi_send_general_command(0x71, 0x800003, NULL, 0, (char *)config_reg, 1);
             break;
 
         case 16:
             QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQPIEnabled - reset config bits 0-7 and send command 61h");
             _qspi_send_general_command(0x65, -1, NULL, 0, (char *)config_reg, 1);
-            config_reg[1] &= 0x7F; //Reset Bit 7 of CR
+            config_reg[0] &= 0x7F; //Reset Bit 7 of CR
             _qspi_send_general_command(0x61, -1, NULL, 0, (char *)config_reg, 1);
             break;
 
@@ -931,7 +935,6 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
 
     set_quad_enable = false;
     is_qpi_mode = false;
-    int dummyCycles = 0;
     uint8_t examinedByte = basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_QPI_READ_SUPPOR_BYTE];
 
     do { // compound statement is the loop body
