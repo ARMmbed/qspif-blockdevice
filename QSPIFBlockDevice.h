@@ -1,5 +1,5 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2016 ARM Limited
+ * Copyright (c) 2018 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,7 +233,7 @@ private:
     /* Utilities Functions */
     /***********************/
     // Find the region to which the given offset belong to
-    int _utils_find_addr_region(int offset);
+    int _utils_find_addr_region(bd_size_t offset);
 
     // Iterate on all supported Erase Types of the Region to which the offset belong to.
     // Iterates from highest type to lowest
@@ -263,7 +263,7 @@ private:
     // Sector Regions Map
     int _regions_count; //number of regions
     int _region_size_bytes[QSPIF_MAX_REGIONS]; //regions size in bytes
-    int _region_high_boundary[QSPIF_MAX_REGIONS]; //region high address offset boundary
+    bd_size_t _region_high_boundary[QSPIF_MAX_REGIONS]; //region high address offset boundary
     //Each Region can support a bit combination of any of the 4 Erase Types
     uint8_t _region_erase_types_bitfield[QSPIF_MAX_REGIONS];
     int _min_common_erase_size; // minimal common erase size for all regions (0 if none exists)
