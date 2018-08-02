@@ -17,6 +17,7 @@
 #include "unity.h"
 #include "utest.h"
 #include "QSPIFBlockDevice.h"
+#include "mbed_trace.h"
 #include <stdlib.h>
 
 using namespace utest::v1;
@@ -302,6 +303,7 @@ Specification specification(test_setup, cases);
 
 int main()
 {
+    mbed_trace_init();
     utest_printf("MAIN STARTS\n");
     return !Harness::run(specification);
 }

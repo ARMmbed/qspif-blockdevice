@@ -18,6 +18,9 @@
 #include <string.h>
 #include "mbed_wait_api.h"
 
+#include "mbed_trace.h"
+#define TRACE_GROUP "QSPIF"
+
 /* Default QSPIF Parameters */
 /****************************/
 #define QSPIF_DEFAULT_READ_SIZE  1
@@ -86,37 +89,14 @@ enum qspif_default_instructions {
     QSPIF_READ = 0x03, // Read data
     QSPIF_SE   = 0x20, // 4KB Sector Erase
     QSPIF_SFDP = 0x5a, // Read SFDP
-
     QSPIF_WRSR = 0x01, // Write Status/Configuration Register
     QSPIF_WRDI = 0x04, // Write Disable
     QSPIF_RDSR = 0x05, // Read Status Register
     QSPIF_WREN = 0x06, // Write Enable
-
     QSPIF_RSTEN = 0x66, // Reset Enable
     QSPIF_RST = 0x99, // Reset
     QSPIF_RDID = 0x9f, // Read Manufacturer and JDEC Device ID
 };
-
-// Remove Remark To Enalbe Logs
-//#define QSPIF_ENABLE_LOGS 1
-
-#ifdef QSPIF_ENABLE_LOGS
-
-#define QSPIF_DEFAULT_DEBUG_LEVEL  QSPIF_DEBUG_WARNING
-
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
-#define QSPIF_LOG(level,...) {\
-    	if (level <= QSPIF_DEFAULT_DEBUG_LEVEL) {\
-    	  char str[256];\
-      	  sprintf(str, "\n[%s][%s:%d], ", __FILENAME__, __FUNCTION__, __LINE__);\
-          sprintf(str+strlen(str),__VA_ARGS__);\
-      	  printf(str);\
-    	}\
-    }
-#else
-#define QSPIF_LOG(level,...)
-#endif //QSPIF_ENABLE_LOGS
 
 // Mutex is used for some QSPI Driver commands that must be done sequentially with no other commands in between
 // e.g. (1)Set Write Enable, (2)Program, (3)Wait Memory Ready
@@ -145,7 +125,8 @@ QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinNam
     _dummy_and_mode_cycles = 0;
 
     if (QSPI_STATUS_OK != _qsp_set_frequency(freq)) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI Set Frequency Failed");
+        tr_error("ERROR: QSPI Set Frequency Failed");
+        tr_error("ERROR: QSPI Set Frequency Failed");
     }
 }
 
@@ -169,17 +150,17 @@ int QSPIFBlockDevice::init()
 
     // Soft Reset
     if ( -1 == _reset_flash_mem()) {
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "ERROR: init - Unable to initialize flash memory, tests failed\n");
+        tr_error("ERROR: init - Unable to initialize flash memory, tests failed\n");
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
         goto Exit_Point;
     } else {
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: Initialize flash memory OK\n");
+        tr_info("INFO: Initialize flash memory OK\n");
     }
 
     /* Read Manufacturer ID (1byte), and Device ID (2bytes)*/
     qspi_status = _qspi_send_read_command(QSPIF_RDID, (char *)vendor_device_ids, 0x0 /*address*/, data_length);
     if (qspi_status != QSPI_STATUS_OK) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Read Vendor ID Failed");
+        tr_error("ERROR: init - Read Vendor ID Failed");
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
         goto Exit_Point;
     }
@@ -195,14 +176,14 @@ int QSPIFBlockDevice::init()
 
     //Synchronize Device
     if ( false == _is_mem_ready()) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - _is_mem_ready Failed");
+        tr_error("ERROR: init - _is_mem_ready Failed");
         status = QSPIF_BD_ERROR_READY_FAILED;
         goto Exit_Point;
     }
 
     /**************************** Parse SFDP Header ***********************************/
     if ( 0 != _sfdp_parse_sfdp_headers(basic_table_addr, basic_table_size, sector_map_table_addr, sector_map_table_size)) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Parse SFDP Headers Failed");
+        tr_error("ERROR: init - Parse SFDP Headers Failed");
         status = QSPIF_BD_ERROR_PARSING_FAILED;
         goto Exit_Point;
     }
@@ -210,7 +191,7 @@ int QSPIFBlockDevice::init()
 
     /**************************** Parse Basic Parameters Table ***********************************/
     if ( 0 != _sfdp_parse_basic_param_table(basic_table_addr, basic_table_size) ) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Parse Basic Param Table Failed");
+        tr_error("ERROR: init - Parse Basic Param Table Failed");
         status = QSPIF_BD_ERROR_PARSING_FAILED;
         goto Exit_Point;
     }
@@ -221,10 +202,10 @@ int QSPIFBlockDevice::init()
     _region_high_boundary[0] = _device_size_bytes - 1;
 
     if ( (sector_map_table_addr != NULL) && (0 != sector_map_table_size) ) {
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: init - Parsing Sector Map Table - addr: 0x%xh, Size: %d", sector_map_table_addr,
-                  sector_map_table_size);
+        tr_info("INFO: init - Parsing Sector Map Table - addr: 0x%xh, Size: %d", sector_map_table_addr,
+                sector_map_table_size);
         if ( 0 != _sfdp_parse_sector_map_table(sector_map_table_addr, sector_map_table_size) ) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Parse Sector Map Table Failed");
+            tr_error("ERROR: init - Parse Sector Map Table Failed");
             status = QSPIF_BD_ERROR_PARSING_FAILED;
             goto Exit_Point;
         }
@@ -255,7 +236,7 @@ int QSPIFBlockDevice::deinit()
     int result = QSPIF_BD_ERROR_OK;
 
     if (status != QSPI_STATUS_OK)  {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Write Disable failed");
+        tr_error("ERROR: Write Disable failed");
         result = QSPIF_BD_ERROR_DEVICE_ERROR;
     }
     _is_initialized = false;
@@ -271,7 +252,7 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
 
     int status = QSPIF_BD_ERROR_OK;
 
-    QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO Inst: 0x%xh", _read_instruction);
+    tr_info("INFO Inst: 0x%xh", _read_instruction);
 
     _mutex->lock();
 
@@ -287,7 +268,7 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
 
     if (QSPI_STATUS_OK != _qspi_send_read_command(_read_instruction, buffer, addr, size)) {
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Read failed\n");
+        tr_error("ERROR: Read failed\n");
     }
 
     // All commands other than Read use default 1-1-1 Bus mode (Program/Erase are constrained by flash memory performance less than that of the bus)
@@ -309,7 +290,7 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
     uint32_t chunk = 0;
     bd_size_t writtenBytes = 0;
 
-    QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: program - Buff: 0x%x, addr: %llu, size: %llu", buffer, addr, size);
+    tr_debug("DEBUG: program - Buff: 0x%x, addr: %llu, size: %llu", buffer, addr, size);
 
     while (size > 0) {
 
@@ -322,14 +303,14 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
 
         //Send WREN
         if (_set_write_enable() != 0) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Write Enabe failed\n");
+            tr_error("ERROR: Write Enabe failed\n");
             program_failed = true;
             status = QSPIF_BD_ERROR_WREN_FAILED;
             goto Exit_Point;
         }
 
         if ( false == _is_mem_ready()) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Device not ready, write failed\n");
+            tr_error("ERROR: Device not ready, write failed\n");
             program_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
             goto Exit_Point;
@@ -337,7 +318,7 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
 
         result = _qspi_send_program_command(_prog_instruction, buffer, addr, &writtenBytes);
         if ( (result != QSPI_STATUS_OK) || (chunk != writtenBytes) ) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Write failed");
+            tr_error("ERROR: Write failed");
             program_failed = true;
             status = QSPIF_BD_ERROR_DEVICE_ERROR;
             goto Exit_Point;
@@ -350,7 +331,7 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
         wait_ms(QSPIF_DEFAULT_TIMEOUT_MSEC);
 
         if ( false == _is_mem_ready()) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Device not ready after write, failed\n");
+            tr_error("ERROR: Device not ready after write, failed\n");
             program_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
             goto Exit_Point;
@@ -383,7 +364,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
     // Erase Types of selected region
     uint8_t bitfield = _region_erase_types_bitfield[region];
 
-    QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: erase - addr: %llu, inSize: %llu", addr, inSize);
+    tr_debug("DEBUG: erase - addr: %llu, inSize: %llu", addr, inSize);
 
     // For each iteration erase the largest section supported by current region
     while (size > 0) {
@@ -394,30 +375,22 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
         cur_erase_inst = _erase_type_inst_arr[type];
         chunk = _erase_type_size_arr[type];
 
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, " Debug: erase - addr: llu, size:%d, Inst: 0x%xh, chunk: %d , ",
-                  addr, size, cur_erase_inst, chunk);
-
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, " Debug: erase - Region: %d, Type:%d",
-                  region, type);
+        tr_debug("DEBUG: erase - addr: llu, size:%d, Inst: 0x%xh, chunk: %d , ",
+                 addr, size, cur_erase_inst, chunk);
+        tr_debug("DEBUG: erase - Region: %d, Type:%d",
+                 region, type);
 
         _mutex->lock();
 
         if (_set_write_enable() != 0) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI Erase - Write Enable failed");
-            erase_failed = true;
-            status = QSPIF_BD_ERROR_WREN_FAILED;
-            goto Exit_Point;
-        }
-
-        if ( false == _is_mem_ready()) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI Erase Device not ready - failed");
+            tr_error("ERROR: QSPI Erase Device not ready - failed");
             erase_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
             goto Exit_Point;
         }
 
         if (QSPI_STATUS_OK != _qspi_send_erase_command(cur_erase_inst, addr, size) ) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI Erase command failed!");
+            tr_error("ERROR: QSPI Erase command failed!");
             erase_failed = true;
             status = QSPIF_BD_ERROR_DEVICE_ERROR;
             goto Exit_Point;
@@ -433,7 +406,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
         }
         wait_ms(QSPIF_DEFAULT_TIMEOUT_MSEC);
         if ( false == _is_mem_ready()) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI After Erase Device not ready - failed\n");
+            tr_error("ERROR: QSPI After Erase Device not ready - failed\n");
             erase_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
             goto Exit_Point;
@@ -496,7 +469,7 @@ bd_size_t QSPIFBlockDevice::get_erase_size(bd_addr_t addr)
         }
 
         if (i_ind == 4) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: no erase type was found for region addr");
+            tr_error("ERROR: no erase type was found for region addr");
         }
     }
 
@@ -527,20 +500,20 @@ int QSPIFBlockDevice::_sfdp_parse_sector_map_table(uint32_t sector_map_table_add
     qspi_status_t status = _qspi_send_read_command(QSPIF_SFDP, (char *)sector_map_table, sector_map_table_addr /*address*/,
                            sector_map_table_size);
     if (status != QSPI_STATUS_OK) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Read SFDP First Table Failed");
+        tr_error("ERROR: init - Read SFDP First Table Failed");
         return -1;
     }
 
     // Currently we support only Single Map Descriptor
     if (! ( (sector_map_table[0] & 0x3) == 0x03 ) && (sector_map_table[1]  == 0x0) ) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Sector Map - Supporting Only Single! Map Descriptor (not map commands)");
+        tr_error("ERROR: Sector Map - Supporting Only Single! Map Descriptor (not map commands)");
         return -1;
     }
 
     _regions_count = sector_map_table[2] + 1;
     if (_regions_count > QSPIF_MAX_REGIONS) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Supporting up to %d regions, current setup to %d regions - fail",
-                  QSPIF_MAX_REGIONS, _regions_count);
+        tr_error("ERROR: Supporting up to %d regions, current setup to %d regions - fail",
+                 QSPIF_MAX_REGIONS, _regions_count);
         return -1;
     }
 
@@ -581,13 +554,13 @@ int QSPIFBlockDevice::_sfdp_parse_basic_param_table(uint32_t basic_table_addr, s
     qspi_status_t status = _qspi_send_read_command(QSPIF_SFDP, (char *)param_table, basic_table_addr /*address*/,
                            basic_table_size);
     if (status != QSPI_STATUS_OK) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Read SFDP First Table Failed");
+        tr_error("ERROR: init - Read SFDP First Table Failed");
         return -1;
     }
 
     // Check address size, currently only supports 3byte addresses
     if ((param_table[2] & 0x4) != 0 || (param_table[7] & 0x80) != 0) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - verify 3byte addressing Failed");
+        tr_error("ERROR: init - verify 3byte addressing Failed");
         return -1;
     }
 
@@ -619,10 +592,10 @@ int QSPIFBlockDevice::_sfdp_parse_basic_param_table(uint32_t basic_table_addr, s
 
     if (true == shouldSetQuadEnable) {
         // Set Quad Enable and QPI Bus modes if Supported
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: init - Setting Quad Enable");
+        tr_info("INFO: init - Setting Quad Enable");
         _sfdp_set_quad_enabled(param_table);
         if (true == is_qpi_mode) {
-            QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: init - Setting QPI mode");
+            tr_info("INFO: init - Setting QPI mode");
             _sfdp_set_qpi_enabled(param_table);
         }
     }
@@ -643,22 +616,22 @@ int QSPIFBlockDevice::_sfdp_parse_sfdp_headers(uint32_t& basic_table_addr, size_
 
     qspi_status_t status = _qspi_send_read_command(QSPIF_SFDP, (char *)sfdp_header, addr /*address*/, data_length);
     if (status != QSPI_STATUS_OK) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Read SFDP Failed");
+        tr_error("ERROR: init - Read SFDP Failed");
         return -1;
     }
 
     // Verify SFDP signature for sanity
     // Also check that major/minor version is acceptable
     if (!(memcmp(&sfdp_header[0], "SFDP", 4) == 0 && sfdp_header[5] == 1)) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - _verify SFDP signature and version Failed");
+        tr_error("ERROR: init - _verify SFDP signature and version Failed");
         return -1;
     } else {
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: init - verified SFDP Signature and version Successfully");
+        tr_info("INFO: init - verified SFDP Signature and version Successfully");
     }
 
     // Discover Number of Parameter Headers
     int number_of_param_headers = (int)(sfdp_header[6]) + 1;
-    QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: number of Param Headers: %d", number_of_param_headers);
+    tr_debug("DEBUG: number of Param Headers: %d", number_of_param_headers);
 
 
     addr += QSPIF_SFDP_HEADER_SIZE;
@@ -669,29 +642,28 @@ int QSPIFBlockDevice::_sfdp_parse_sfdp_headers(uint32_t& basic_table_addr, size_
 
         status = _qspi_send_read_command(QSPIF_SFDP, (char *)param_header, addr, data_length);
         if (status != QSPI_STATUS_OK) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: init - Read Param Table %d Failed", i_ind + 1);
+            tr_error("ERROR: init - Read Param Table %d Failed", i_ind + 1);
             return -1;
         }
 
         // The SFDP spec indicates the standard table is always at offset 0
         // in the parameter headers, we check just to be safe
         if (param_header[2] != 1) {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Param Table %d - Major Version should be 1!", i_ind + 1);
+            tr_error("ERROR: Param Table %d - Major Version should be 1!", i_ind + 1);
             return -1;
         }
 
         if ((param_header[0] == 0) && (param_header[7] == 0xFF)) {
             // Found Basic Params Table: LSB=0x00, MSB=0xFF
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Found Basic Param Table at Table: %d", i_ind + 1);
+            tr_debug("DEBUG: Found Basic Param Table at Table: %d", i_ind + 1);
             basic_table_addr = ( (param_header[6] << 16) | (param_header[5] << 8) | (param_header[4]) );
             // Supporting up to 64 Bytes Table (16 DWORDS)
             basic_table_size = ((param_header[3] * 4) < SFDP_DEFAULT_BASIC_PARAMS_TABLE_SIZE_BYTES) ? (param_header[3] * 4) : 64;
 
         } else if ((param_header[0] == 81) && (param_header[7] == 0xFF)) {
             // Found Sector Map Table: LSB=0x81, MSB=0xFF
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Found Sector Map Table at Table: %d", i_ind + 1);
+            tr_debug("DEBUG: Found Sector Map Table at Table: %d", i_ind + 1);
             sector_map_table_addr = ( (param_header[6] << 16) | (param_header[5] << 8) | (param_header[4]) );
-
             sector_map_table_size = param_header[3] * 4;
 
         }
@@ -714,31 +686,31 @@ int QSPIFBlockDevice::_sfdp_set_qpi_enabled(uint8_t *basic_param_table_ptr)
     switch (en_seq_444_value) {
         case 1:
         case 2:
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQPIEnabled - send command 38h");
+            tr_debug("DEBUG: _setQPIEnabled - send command 38h");
             _qspi_send_general_command(0x38, -1, NULL, 0, NULL, 0);
             break;
 
         case 4:
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQPIEnabled - send command 35h");
+            tr_debug("DEBUG: _setQPIEnabled - send command 35h");
             _qspi_send_general_command(0x35, -1, NULL, 0, NULL, 0);
             break;
 
         case 8:
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQPIEnabled - set config bit 6 and send command 71h");
+            tr_debug("DEBUG: _setQPIEnabled - set config bit 6 and send command 71h");
             _qspi_send_general_command(0x65, 0x800003, NULL, 0, (char *)config_reg, 1);
             config_reg[0] |= 0x40; //Set Bit 6
             _qspi_send_general_command(0x71, 0x800003, NULL, 0, (char *)config_reg, 1);
             break;
 
         case 16:
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQPIEnabled - reset config bits 0-7 and send command 61h");
+            tr_debug("DEBUG: _setQPIEnabled - reset config bits 0-7 and send command 61h");
             _qspi_send_general_command(0x65, -1, NULL, 0, (char *)config_reg, 1);
             config_reg[0] &= 0x7F; //Reset Bit 7 of CR
             _qspi_send_general_command(0x61, -1, NULL, 0, (char *)config_reg, 1);
             break;
 
         default:
-            QSPIF_LOG(QSPIF_DEBUG_WARNING, "WARNING: _setQPIEnabled - Unsuported En Seq 444 configuration");
+            tr_warning("WARNING: _setQPIEnabled - Unsuported En Seq 444 configuration");
             break;
 
     }
@@ -764,14 +736,14 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
 
     switch (qer_value) {
         case 0:
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Device Does not Have a QE Bit, continue based on Read Inst");
+            tr_debug("DEBUG: Device Does not Have a QE Bit, continue based on Read Inst");
             return 0;
 
         case 1:
         case 4:
             status_reg_setup[0] = 0;
             status_reg_setup[1] = 0x02;  //Bit 1 of Status Reg 2
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Setting QE Bit, Bit 1 of Status Reg 2");
+            tr_debug("DEBUG: Setting QE Bit, Bit 1 of Status Reg 2");
             break;
 
         case 2:
@@ -779,7 +751,7 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
             status_reg_setup[1] = 0;
             sr_write_size = 1;
             sr_read_size = 1;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Setting QE Bit, Bit 6 of Status Reg 1");
+            tr_debug("DEBUG: Setting QE Bit, Bit 6 of Status Reg 1");
             break;
 
         case 3:
@@ -789,17 +761,17 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
             sr_read_size = 1;
             write_register_inst = 0x3E;
             read_register_inst = 0x3F;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Setting QE Bit, Bit 7 of Status Reg 1");
+            tr_debug("DEBUG: Setting QE Bit, Bit 7 of Status Reg 1");
             break;
         case 5:
             status_reg_setup[0] = 0;
             status_reg_setup[1] = 0x02; //Bit 1 of status Reg 2
             read_register_inst = 0x35;
             sr_read_size = 1;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Setting QE Bit, Bit 1 of Status Reg 2 -special read command");
+            tr_debug("DEBUG: Setting QE Bit, Bit 1 of Status Reg 2 -special read command");
             break;
         default:
-            QSPIF_LOG(QSPIF_DEBUG_WARNING, "WARNING: _setQuadEnable - Unsuported QER configuration");
+            tr_warning("WARNING: _setQuadEnable - Unsuported QER configuration");
             break;
 
 
@@ -808,9 +780,9 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
     // Read Status Register
     if (QSPI_STATUS_OK == _qspi_send_general_command(read_register_inst, -1, NULL, 0, (char *)status_reg,
             sr_read_size) ) {  // store received values in status_value
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Reading Status Register Success: value = 0x%x\n", (int)status_reg[0]);
+        tr_debug("DEBUG: Reading Status Register Success: value = 0x%x\n", (int)status_reg[0]);
     } else {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Reading Status Register failed");
+        tr_error("ERROR: Reading Status Register failed");
         return -1;
     }
 
@@ -821,28 +793,28 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
 
     // Write new Status Register Setup
     if (_set_write_enable() != 0) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Write Enabe failed\n");
+        tr_error("ERROR: Write Enabe failed\n");
         return -1;
     }
 
     if ( false == _is_mem_ready()) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Device not ready, write failed");
+        tr_error("ERROR: Device not ready, write failed");
         return -1;
     }
 
     if (QSPI_STATUS_OK == _qspi_send_general_command(write_register_inst, -1, (char *)status_reg, sr_write_size, NULL,
             0) ) {  // Write QE to status_register
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _setQuadEnable - Writing Status Register Success: value = 0x%x",
-                  (int)status_reg[0]);
+        tr_debug("DEBUG: _setQuadEnable - Writing Status Register Success: value = 0x%x",
+                 (int)status_reg[0]);
     } else {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: _setQuadEnable - Writing Status Register failed");
+        tr_error("ERROR: _setQuadEnable - Writing Status Register failed");
         return -1;
     }
 
     wait_ms(QSPI_STATUS_REGISTER_WRITE_TIMEOUT_MSEC);
 
     if ( false == _is_mem_ready()) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Device not ready after write, failed");
+        tr_error("ERROR: Device not ready after write, failed");
         return -1;
     }
 
@@ -851,9 +823,9 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
     memset(status_reg, 0, QSPI_MAX_STATUS_REGISTER_SIZE);
     if (QSPI_STATUS_OK == _qspi_send_general_command(read_register_inst, -1, NULL, 0, (char *)status_reg,
             sr_read_size) ) {  // store received values in status_value
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Reading Status Register Success: value = 0x%x\n", (int)status_reg[0]);
+        tr_debug("DEBUG: Reading Status Register Success: value = 0x%x\n", (int)status_reg[0]);
     } else {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Reading Status Register failed");
+        tr_error("ERROR: Reading Status Register failed");
         return -1;
     }
 
@@ -867,7 +839,7 @@ int QSPIFBlockDevice::_sfdp_detect_page_size(uint8_t *basic_param_table_ptr)
     // Page Size is specified by 4 Bits (N), calculated by 2^N
     int page_to_power_size = ( (int)basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_PAGE_SIZE_BYTE]) >> 4;
     int page_size = local_math_power(2, page_to_power_size);
-    QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: _detectPageSize - Page Size: %d", page_size);
+    tr_debug("DEBUG: _detectPageSize - Page Size: %d", page_size);
     return page_size;
 }
 
@@ -888,8 +860,8 @@ int QSPIFBlockDevice::_sfdp_detect_erase_types_inst_and_size(uint8_t *basic_para
         erase_type_inst_arr[i_ind] = 0xff; //0xFF default for unsupported type
         erase_type_size_arr[i_ind] = local_math_power(2,
                                      basic_param_table_ptr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_SIZE_BYTE + 2 * i_ind]); // Size given as 2^N
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "DEBUG: Erase Type(A) %d - Inst: 0x%xh, Size: %d", (i_ind + 1), erase_type_inst_arr[i_ind],
-                  erase_type_size_arr[i_ind]);
+        tr_info("DEBUG: Erase Type(A) %d - Inst: 0x%xh, Size: %d", (i_ind + 1), erase_type_inst_arr[i_ind],
+                erase_type_size_arr[i_ind]);
         if (erase_type_size_arr[i_ind] > 1) {
             // if size==1 type is not supported
             erase_type_inst_arr[i_ind] = basic_param_table_ptr[QSPIF_BASIC_PARAM_ERASE_TYPE_1_BYTE + 2 * i_ind];
@@ -905,21 +877,20 @@ int QSPIFBlockDevice::_sfdp_detect_erase_types_inst_and_size(uint8_t *basic_para
                 if (erase4k_inst != erase_type_inst_arr[i_ind]) {
                     //Verify 4KErase Type is identical to Legacy 4K erase type specified in Byte 1 of Param Table
                     erase4k_inst = erase_type_inst_arr[i_ind];
-                    QSPIF_LOG(QSPIF_DEBUG_WARNING,
-                              "WARNING: _detectEraseTypesInstAndSize - Default 4K erase Inst is different than erase type Inst for 4K");
+                    tr_warning("WARNING: _detectEraseTypesInstAndSize - Default 4K erase Inst is different than erase type Inst for 4K");
 
                 }
             }
             _region_erase_types_bitfield[0] |= bitfield; // If there's no region map, set region "0" types bitfield as defualt;
         }
 
-        QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: Erase Type %d - Inst: 0x%xh, Size: %d", (i_ind + 1), erase_type_inst_arr[i_ind],
-                  erase_type_size_arr[i_ind]);
+        tr_info("INFO: Erase Type %d - Inst: 0x%xh, Size: %d", (i_ind + 1), erase_type_inst_arr[i_ind],
+                erase_type_size_arr[i_ind]);
         bitfield = bitfield << 1;
     }
 
     if (false == found_4Kerase_type) {
-        QSPIF_LOG(QSPIF_DEBUG_WARNING, "WARNING: Couldn't find Erase Type for 4KB size");
+        tr_warning("WARNING: Couldn't find Erase Type for 4KB size");
     }
     return 0;
 }
@@ -947,7 +918,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
             is_qpi_mode = true;
             _dummy_and_mode_cycles = (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_444_READ_INST_BYTE - 1] >> 5)
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_444_READ_INST_BYTE - 1] & 0x1F);
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "/nDEBUG: Read Bus Mode set to 4-4-4, Instruction: 0x%xh", _read_instruction);
+            tr_debug("/nDEBUG: Read Bus Mode set to 4-4-4, Instruction: 0x%xh", _read_instruction);
             //_inst_width = QSPI_CFG_BUS_QUAD;
             _address_width = QSPI_CFG_BUS_QUAD;
             _data_width = QSPI_CFG_BUS_QUAD;
@@ -966,7 +937,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_144_READ_INST_BYTE - 1] & 0x1F);
             _address_width = QSPI_CFG_BUS_QUAD;
             _data_width = QSPI_CFG_BUS_QUAD;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "/nDEBUG: Read Bus Mode set to 1-4-4, Instruction: 0x%xh", _read_instruction);
+            tr_debug("/nDEBUG: Read Bus Mode set to 1-4-4, Instruction: 0x%xh", _read_instruction);
             break;
         }
         if (examined_byte & 0x80) {
@@ -976,7 +947,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
             _dummy_and_mode_cycles = (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_114_READ_INST_BYTE - 1] >> 5)
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_114_READ_INST_BYTE - 1] & 0x1F);
             _data_width = QSPI_CFG_BUS_QUAD;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "/nDEBUG: Read Bus Mode set to 1-1-4, Instruction: 0x%xh", _read_instruction);
+            tr_debug("/nDEBUG: Read Bus Mode set to 1-1-4, Instruction: 0x%xh", _read_instruction);
             break;
         }
         examined_byte = basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_QPI_READ_SUPPOR_BYTE];
@@ -987,7 +958,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_222_READ_INST_BYTE - 1] & 0x1F);
             _address_width = QSPI_CFG_BUS_DUAL;
             _data_width = QSPI_CFG_BUS_DUAL;
-            QSPIF_LOG(QSPIF_DEBUG_INFO, "/nINFO: Read Bus Mode set to 2-2-2, Instruction: 0x%xh", _read_instruction);
+            tr_info("/nINFO: Read Bus Mode set to 2-2-2, Instruction: 0x%xh", _read_instruction);
             break;
         }
 
@@ -999,7 +970,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_122_READ_INST_BYTE - 1] & 0x1F);
             _address_width = QSPI_CFG_BUS_DUAL;
             _data_width = QSPI_CFG_BUS_DUAL;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "/nDEBUG: Read Bus Mode set to 1-2-2, Instruction: 0x%xh", _read_instruction);
+            tr_debug("/nDEBUG: Read Bus Mode set to 1-2-2, Instruction: 0x%xh", _read_instruction);
             break;
         }
         if (examined_byte & 0x01) {
@@ -1008,10 +979,10 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
             _dummy_and_mode_cycles = (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_112_READ_INST_BYTE - 1] >> 5)
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_112_READ_INST_BYTE - 1] & 0x1F);
             _data_width = QSPI_CFG_BUS_DUAL;
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "/nDEBUG: Read Bus Mode set to 1-1-2, Instruction: 0x%xh", _read_instruction);
+            tr_debug("/nDEBUG: Read Bus Mode set to 1-1-2, Instruction: 0x%xh", _read_instruction);
             break;
         }
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, "/nDEBUG: Read Bus Mode set to 1-1-1, Instruction: 0x%xh", _read_instruction);
+        tr_debug("/nDEBUG: Read Bus Mode set to 1-1-1, Instruction: 0x%xh", _read_instruction);
         is_done = true;
     } while (is_done == false);
 
@@ -1024,13 +995,13 @@ int QSPIFBlockDevice::_reset_flash_mem()
     // Perform Soft Reset of the Device prior to initialization
     int status = 0;
     char status_value[2] = {0};
-    QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: _reset_flash_mem:\n");
+    tr_info("INFO: _reset_flash_mem:\n");
     //Read the Status Register from device
     if (QSPI_STATUS_OK == _qspi_send_general_command(QSPIF_RDSR, -1, NULL, 0, status_value,
             1) ) {  // store received values in status_value
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Reading Status Register Success: value = 0x%x\n", (int)status_value[0]);
+        tr_debug("DEBUG: Reading Status Register Success: value = 0x%x\n", (int)status_value[0]);
     } else {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Reading Status Register failed\n");
+        tr_debug("ERROR: Reading Status Register failed\n");
         status = -1;
     }
 
@@ -1038,9 +1009,9 @@ int QSPIFBlockDevice::_reset_flash_mem()
         //Send Reset Enable
         if (QSPI_STATUS_OK == _qspi_send_general_command(QSPIF_RSTEN, -1, NULL, 0, NULL,
                 0) ) {   // store received values in status_value
-            QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Sending RSTEN Success\n");
+            tr_debug("DEBUG: Sending RSTEN Success\n");
         } else {
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Sending RSTEN failed\n");
+            tr_error("ERROR: Sending RSTEN failed\n");
             status = -1;
         }
 
@@ -1049,9 +1020,9 @@ int QSPIFBlockDevice::_reset_flash_mem()
             //Send Reset
             if (QSPI_STATUS_OK == _qspi_send_general_command(QSPIF_RST, -1, NULL, 0, NULL,
                     0)) {   // store received values in status_value
-                QSPIF_LOG(QSPIF_DEBUG_DEBUG, "DEBUG: Sending RST Success\n");
+                tr_debug("DEBUG: Sending RST Success\n");
             } else {
-                QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Sending RST failed\n");
+                tr_error("ERROR: Sending RST failed\n");
                 status = -1;
             }
 
@@ -1075,12 +1046,12 @@ bool QSPIFBlockDevice::_is_mem_ready()
         //Read the Status Register from device
         if (QSPI_STATUS_OK != _qspi_send_general_command(QSPIF_RDSR, -1, NULL, 0, status_value,
                 2)) {   // store received values in status_value
-            QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Reading Status Register failed\n");
+            tr_error("ERROR: Reading Status Register failed\n");
         }
     } while ( (status_value[0] & 0x1) != 0 && retries < IS_MEM_READY_MAX_RETRIES );
 
     if ((status_value[0] & 0x1) != 0) {
-        QSPIF_LOG(QSPIF_DEBUG_DEBUG, "ERROR: _is_mem_ready FALSE\n");
+        tr_error("ERROR: _is_mem_ready FALSE\n");
         mem_ready = false;
     }
     return mem_ready;
@@ -1091,7 +1062,7 @@ int QSPIFBlockDevice::_set_write_enable()
 {
     int status = 0;
     if (QSPI_STATUS_OK !=  _qspi_send_general_command(QSPIF_WREN, -1, NULL, 0, NULL, 0)) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR:Sending WREN command FAILED\n");
+        tr_error("ERROR:Sending WREN command FAILED\n");
         status = -1;
     }
     return status;
@@ -1145,7 +1116,7 @@ int QSPIFBlockDevice::_utils_iterate_next_largest_erase_type(uint8_t& bitfield, 
     }
 
     if (i_ind == 4) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: no erase type was found for current region addr");
+        tr_error("ERROR: no erase type was found for current region addr");
     }
     return largest_erase_type;
 
@@ -1169,7 +1140,7 @@ qspi_status_t QSPIFBlockDevice::_qspi_send_read_command(unsigned int read_inst, 
     size_t buf_len = size;
 
     if (_qspi.read(read_inst, -1, (unsigned int )addr, (char *)buffer, &buf_len) != QSPI_STATUS_OK ) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: Read failed");
+        tr_error("ERROR: Read failed");
         return QSPI_STATUS_ERROR;
     }
 
@@ -1186,7 +1157,7 @@ qspi_status_t QSPIFBlockDevice::_qspi_send_program_command(unsigned int progInst
 
     result = _qspi.write(progInst, -1, addr, (char *)buffer, (size_t *)size);
     if (result != QSPI_STATUS_OK) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI Write failed");
+        tr_error("ERROR: QSPI Write failed");
     }
 
     return result;
@@ -1198,7 +1169,7 @@ qspi_status_t QSPIFBlockDevice::_qspi_send_erase_command(unsigned int eraseInst,
     // Send Erase Instruction command to driver
     qspi_status_t result = QSPI_STATUS_OK;
 
-    QSPIF_LOG(QSPIF_DEBUG_INFO, "INFO: Inst: 0x%xh, addr: %llu, size: %llu", eraseInst, addr, size);
+    tr_info("INFO: Inst: 0x%xh, addr: %llu, size: %llu", eraseInst, addr, size);
 
     result = _qspi.command_transfer(eraseInst, // command to send
                                     (((int)addr) & 0x00FFF000), // Align addr to 4096
@@ -1208,7 +1179,7 @@ qspi_status_t QSPIFBlockDevice::_qspi_send_erase_command(unsigned int eraseInst,
                                     0); // store received values in status_value
 
     if (QSPI_STATUS_OK != result) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR: QSPI Erase failed");
+        tr_error("ERROR: QSPI Erase failed");
     }
 
     return result;
@@ -1224,7 +1195,7 @@ qspi_status_t QSPIFBlockDevice::_qspi_send_general_command(unsigned int instruct
     qspi_status_t status = _qspi.command_transfer(instruction, (int)addr, tx_buffer, tx_length, rx_buffer, rx_length);
 
     if (QSPI_STATUS_OK != status) {
-        QSPIF_LOG(QSPIF_DEBUG_ERROR, "ERROR:Sending Generic command: %x", instruction);
+        tr_error("ERROR:Sending Generic command: %x", instruction);
     }
 
     return status;
