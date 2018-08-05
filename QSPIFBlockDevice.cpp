@@ -28,7 +28,9 @@
 #define QSPIF_DEFAULT_SE_SIZE    4096
 #define QSPI_MAX_STATUS_REGISTER_SIZE 2
 #define QSPI_STATUS_REGISTER_WRITE_TIMEOUT_MSEC 50
-#define QSPIF_DEFAULT_TIMEOUT_MSEC    1
+// Status Register Bits
+#define QSPIF_STATUS_BIT_WIP	0x1 //Write In Progress
+#define QSPIF_STATUS_BIT_WEL	0x2 // Write Enable Latch
 
 
 /* SFDP Header Parsing */
@@ -72,7 +74,7 @@
 #define ERASE_BITMASK_NONE  0x00
 #define ERASE_BITMASK_ALL   0x0F
 
-#define IS_MEM_READY_MAX_RETRIES 10000
+#define IS_MEM_READY_MAX_RETRIES 1000
 
 // Debug Printouts
 #define QSPIF_DEBUG_ERROR   1
@@ -308,13 +310,6 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
             goto exit_point;
         }
 
-        if ( false == _is_mem_ready()) {
-            tr_error("ERROR: Device not ready, write failed\n");
-            program_failed = true;
-            status = QSPIF_BD_ERROR_READY_FAILED;
-            goto exit_point;
-        }
-
         result = _qspi_send_program_command(_prog_instruction, buffer, addr, &writtenBytes);
         if ( (result != QSPI_STATUS_OK) || (chunk != writtenBytes) ) {
             tr_error("ERROR: Write failed");
@@ -326,8 +321,6 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
         buffer = static_cast<const uint8_t *>(buffer) + chunk;
         addr += chunk;
         size -= chunk;
-
-        wait_ms(QSPIF_DEFAULT_TIMEOUT_MSEC);
 
         if ( false == _is_mem_ready()) {
             tr_error("ERROR: Device not ready after write, failed\n");
@@ -374,7 +367,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
         cur_erase_inst = _erase_type_inst_arr[type];
         chunk = _erase_type_size_arr[type];
 
-        tr_debug("DEBUG: erase - addr: llu, size:%d, Inst: 0x%xh, chunk: %d , ",
+        tr_debug("DEBUG: erase - addr: %llu, size:%d, Inst: 0x%xh, chunk: %d , ",
                  addr, size, cur_erase_inst, chunk);
         tr_debug("DEBUG: erase - Region: %d, Type:%d",
                  region, type);
@@ -403,7 +396,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
             region++;
             bitfield = _region_erase_types_bitfield[region];
         }
-        wait_ms(QSPIF_DEFAULT_TIMEOUT_MSEC);
+
         if ( false == _is_mem_ready()) {
             tr_error("ERROR: QSPI After Erase Device not ready - failed\n");
             erase_failed = true;
@@ -796,11 +789,6 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
         return -1;
     }
 
-    if ( false == _is_mem_ready()) {
-        tr_error("ERROR: Device not ready, write failed");
-        return -1;
-    }
-
     if (QSPI_STATUS_OK == _qspi_send_general_command(write_register_inst, -1, (char *)status_reg, sr_write_size, NULL,
             0) ) {  // Write QE to status_register
         tr_debug("DEBUG: _setQuadEnable - Writing Status Register Success: value = 0x%x",
@@ -810,7 +798,7 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
         return -1;
     }
 
-    wait_ms(QSPI_STATUS_REGISTER_WRITE_TIMEOUT_MSEC);
+//    wait_ms(QSPI_STATUS_REGISTER_WRITE_TIMEOUT_MSEC);
 
     if ( false == _is_mem_ready()) {
         tr_error("ERROR: Device not ready after write, failed");
@@ -1035,15 +1023,16 @@ bool QSPIFBlockDevice::_is_mem_ready()
     bool mem_ready = true;
 
     do {
+        wait_ms(1);
         retries++;
         //Read the Status Register from device
         if (QSPI_STATUS_OK != _qspi_send_general_command(QSPIF_RDSR, -1, NULL, 0, status_value,
                 2)) {   // store received values in status_value
             tr_error("ERROR: Reading Status Register failed\n");
         }
-    } while ( (status_value[0] & 0x1) != 0 && retries < IS_MEM_READY_MAX_RETRIES );
+    } while ( (status_value[0] & QSPIF_STATUS_BIT_WIP) != 0 && retries < IS_MEM_READY_MAX_RETRIES );
 
-    if ((status_value[0] & 0x1) != 0) {
+    if ((status_value[0] & QSPIF_STATUS_BIT_WIP) != 0) {
         tr_error("ERROR: _is_mem_ready FALSE\n");
         mem_ready = false;
     }
@@ -1053,11 +1042,34 @@ bool QSPIFBlockDevice::_is_mem_ready()
 
 int QSPIFBlockDevice::_set_write_enable()
 {
-    int status = 0;
-    if (QSPI_STATUS_OK !=  _qspi_send_general_command(QSPIF_WREN, -1, NULL, 0, NULL, 0)) {
-        tr_error("ERROR:Sending WREN command FAILED\n");
-        status = -1;
-    }
+    // Check Status Register Busy Bit to Verify the Device isn't Busy
+    char status_value[2];
+    int status = -1;
+
+    do {
+        if (QSPI_STATUS_OK !=  _qspi_send_general_command(QSPIF_WREN, -1, NULL, 0, NULL, 0)) {
+            tr_error("ERROR:Sending WREN command FAILED\n");
+            break;
+        }
+
+        if ( false == _is_mem_ready()) {
+            tr_error("ERROR: Device not ready, write failed");
+            break;
+        }
+
+        memset(status_value, 0, 2);
+        if (QSPI_STATUS_OK != _qspi_send_general_command(QSPIF_RDSR, -1, NULL, 0, status_value,
+                2)) {   // store received values in status_value
+            tr_error("ERROR: Reading Status Register failed\n");
+            break;
+        }
+
+        if ((status_value[0] & QSPIF_STATUS_BIT_WEL) == 0) {
+            tr_error("ERROR: _set_write_enable failed\n");
+            break;
+        }
+        status = 0;
+    } while (false);
     return status;
 }
 
