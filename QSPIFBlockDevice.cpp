@@ -27,7 +27,6 @@
 #define QSPIF_DEFAULT_PROG_SIZE  1
 #define QSPIF_DEFAULT_SE_SIZE    4096
 #define QSPI_MAX_STATUS_REGISTER_SIZE 2
-#define QSPI_STATUS_REGISTER_WRITE_TIMEOUT_MSEC 50
 // Status Register Bits
 #define QSPIF_STATUS_BIT_WIP	0x1 //Write In Progress
 #define QSPIF_STATUS_BIT_WEL	0x2 // Write Enable Latch
@@ -205,7 +204,7 @@ int QSPIFBlockDevice::init()
     if ( (sector_map_table_addr != NULL) && (0 != sector_map_table_size) ) {
         tr_info("INFO: init - Parsing Sector Map Table - addr: 0x%xh, Size: %d", sector_map_table_addr,
                 sector_map_table_size);
-        if ( 0 != _sfdp_parse_sector_map_table(sector_map_table_addr, sector_map_table_size) ) {
+        if (0 != _sfdp_parse_sector_map_table(sector_map_table_addr, sector_map_table_size) ) {
             tr_error("ERROR: init - Parse Sector Map Table Failed");
             status = QSPIF_BD_ERROR_PARSING_FAILED;
             goto exit_point;
@@ -258,14 +257,8 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
     _mutex->lock();
 
     // Configure Bus for Reading
-    _qspi_configure_format(
-        _inst_width, //Bus width for Instruction phase
-        _address_width, //Bus width for Address phase
-        _address_size,
-        QSPI_CFG_BUS_SINGLE, //Bus width for Alt phase
-        QSPI_CFG_ALT_SIZE_8,
-        _data_width, //Bus width for Data phase
-        _dummy_and_mode_cycles);
+    _qspi_configure_format(_inst_width, _address_width, _address_size, QSPI_CFG_BUS_SINGLE,
+                           QSPI_CFG_ALT_SIZE_8, _data_width, _dummy_and_mode_cycles);
 
     if (QSPI_STATUS_OK != _qspi_send_read_command(_read_instruction, buffer, addr, size)) {
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
@@ -797,8 +790,6 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
         tr_error("ERROR: _setQuadEnable - Writing Status Register failed");
         return -1;
     }
-
-//    wait_ms(QSPI_STATUS_REGISTER_WRITE_TIMEOUT_MSEC);
 
     if ( false == _is_mem_ready()) {
         tr_error("ERROR: Device not ready after write, failed");
