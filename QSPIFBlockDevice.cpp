@@ -126,7 +126,6 @@ QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinNam
 
     if (QSPI_STATUS_OK != _qsp_set_frequency(freq)) {
         tr_error("ERROR: QSPI Set Frequency Failed");
-        tr_error("ERROR: QSPI Set Frequency Failed");
     }
 }
 
@@ -145,14 +144,14 @@ int QSPIFBlockDevice::init()
 
     _mutex->lock();
     if (_is_initialized == true) {
-        goto Exit_Point;
+        goto exit_point;
     }
 
     // Soft Reset
     if ( -1 == _reset_flash_mem()) {
         tr_error("ERROR: init - Unable to initialize flash memory, tests failed\n");
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
-        goto Exit_Point;
+        goto exit_point;
     } else {
         tr_info("INFO: Initialize flash memory OK\n");
     }
@@ -162,7 +161,7 @@ int QSPIFBlockDevice::init()
     if (qspi_status != QSPI_STATUS_OK) {
         tr_error("ERROR: init - Read Vendor ID Failed");
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
-        goto Exit_Point;
+        goto exit_point;
     }
 
     switch (vendor_device_ids[0]) {
@@ -178,14 +177,14 @@ int QSPIFBlockDevice::init()
     if ( false == _is_mem_ready()) {
         tr_error("ERROR: init - _is_mem_ready Failed");
         status = QSPIF_BD_ERROR_READY_FAILED;
-        goto Exit_Point;
+        goto exit_point;
     }
 
     /**************************** Parse SFDP Header ***********************************/
     if ( 0 != _sfdp_parse_sfdp_headers(basic_table_addr, basic_table_size, sector_map_table_addr, sector_map_table_size)) {
         tr_error("ERROR: init - Parse SFDP Headers Failed");
         status = QSPIF_BD_ERROR_PARSING_FAILED;
-        goto Exit_Point;
+        goto exit_point;
     }
 
 
@@ -193,7 +192,7 @@ int QSPIFBlockDevice::init()
     if ( 0 != _sfdp_parse_basic_param_table(basic_table_addr, basic_table_size) ) {
         tr_error("ERROR: init - Parse Basic Param Table Failed");
         status = QSPIF_BD_ERROR_PARSING_FAILED;
-        goto Exit_Point;
+        goto exit_point;
     }
 
     /**************************** Parse Sector Map Table ***********************************/
@@ -207,7 +206,7 @@ int QSPIFBlockDevice::init()
         if ( 0 != _sfdp_parse_sector_map_table(sector_map_table_addr, sector_map_table_size) ) {
             tr_error("ERROR: init - Parse Sector Map Table Failed");
             status = QSPIF_BD_ERROR_PARSING_FAILED;
-            goto Exit_Point;
+            goto exit_point;
         }
     }
 
@@ -217,7 +216,7 @@ int QSPIFBlockDevice::init()
 
     _is_initialized = true;
 
-Exit_Point:
+exit_point:
     _mutex->unlock();
 
     return status;
@@ -306,14 +305,14 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
             tr_error("ERROR: Write Enabe failed\n");
             program_failed = true;
             status = QSPIF_BD_ERROR_WREN_FAILED;
-            goto Exit_Point;
+            goto exit_point;
         }
 
         if ( false == _is_mem_ready()) {
             tr_error("ERROR: Device not ready, write failed\n");
             program_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
-            goto Exit_Point;
+            goto exit_point;
         }
 
         result = _qspi_send_program_command(_prog_instruction, buffer, addr, &writtenBytes);
@@ -321,7 +320,7 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
             tr_error("ERROR: Write failed");
             program_failed = true;
             status = QSPIF_BD_ERROR_DEVICE_ERROR;
-            goto Exit_Point;
+            goto exit_point;
         }
 
         buffer = static_cast<const uint8_t *>(buffer) + chunk;
@@ -334,14 +333,14 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
             tr_error("ERROR: Device not ready after write, failed\n");
             program_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
-            goto Exit_Point;
+            goto exit_point;
         }
         _mutex->unlock();
 
 
     }
 
-Exit_Point:
+exit_point:
     if (program_failed) {
         _mutex->unlock();
     }
@@ -386,14 +385,14 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
             tr_error("ERROR: QSPI Erase Device not ready - failed");
             erase_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
-            goto Exit_Point;
+            goto exit_point;
         }
 
         if (QSPI_STATUS_OK != _qspi_send_erase_command(cur_erase_inst, addr, size) ) {
             tr_error("ERROR: QSPI Erase command failed!");
             erase_failed = true;
             status = QSPIF_BD_ERROR_DEVICE_ERROR;
-            goto Exit_Point;
+            goto exit_point;
         }
 
         addr += chunk;
@@ -409,13 +408,13 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
             tr_error("ERROR: QSPI After Erase Device not ready - failed\n");
             erase_failed = true;
             status = QSPIF_BD_ERROR_READY_FAILED;
-            goto Exit_Point;
+            goto exit_point;
         }
 
         _mutex->unlock();
     }
 
-Exit_Point:
+exit_point:
     if (erase_failed) {
         _mutex->unlock();
     }
@@ -900,16 +899,11 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
         bool& is_qpi_mode,
         unsigned int& read_inst)
 {
-
-    bool is_done = false;
-
     set_quad_enable = false;
     is_qpi_mode = false;
     uint8_t examined_byte = basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_QPI_READ_SUPPOR_BYTE];
 
     do { // compound statement is the loop body
-
-
 
         if (examined_byte & 0x10) {
             // QPI 4-4-4 Supported
@@ -983,8 +977,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
             break;
         }
         tr_debug("/nDEBUG: Read Bus Mode set to 1-1-1, Instruction: 0x%xh", _read_instruction);
-        is_done = true;
-    } while (is_done == false);
+    } while (false);
 
     return 0;
 }
