@@ -247,8 +247,9 @@ private:
 
     bool _is_initialized;
 
-    // mutex is required for sequence of driver commands that can not be disrupted
-    static SingletonPtr<PlatformMutex> _mutex;
+    // Mutex is used to protect Flash device for some QSPI Driver commands that must be done sequentially with no other commands in between
+    // e.g. (1)Set Write Enable, (2)Program, (3)Wait Memory Ready
+    PlatformMutex _mutex;
 
     // Command Instructions
     unsigned int _read_instruction;

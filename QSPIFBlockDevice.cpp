@@ -99,10 +99,6 @@ enum qspif_default_instructions {
     QSPIF_RDID = 0x9f, // Read Manufacturer and JDEC Device ID
 };
 
-// Mutex is used for some QSPI Driver commands that must be done sequentially with no other commands in between
-// e.g. (1)Set Write Enable, (2)Program, (3)Wait Memory Ready
-SingletonPtr<PlatformMutex> QSPIFBlockDevice::_mutex;
-
 // Local Function
 static int local_math_power(int base, int exp);
 
@@ -143,7 +139,7 @@ int QSPIFBlockDevice::init()
     size_t sector_map_table_size = 0;
     int qspi_status = QSPI_STATUS_OK;
 
-    _mutex->lock();
+    _mutex.lock();
     if (_is_initialized == true) {
         goto exit_point;
     }
@@ -218,16 +214,16 @@ int QSPIFBlockDevice::init()
     _is_initialized = true;
 
 exit_point:
-    _mutex->unlock();
+    _mutex.unlock();
 
     return status;
 }
 
 int QSPIFBlockDevice::deinit()
 {
-    _mutex->lock();
+    _mutex.lock();
     if (_is_initialized == false) {
-        _mutex->unlock();
+        _mutex.unlock();
         return QSPIF_BD_ERROR_OK;
     }
 
@@ -240,7 +236,7 @@ int QSPIFBlockDevice::deinit()
         result = QSPIF_BD_ERROR_DEVICE_ERROR;
     }
     _is_initialized = false;
-    _mutex->unlock();
+    _mutex.unlock();
 
     return result;
 }
@@ -254,7 +250,7 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
 
     tr_info("INFO Inst: 0x%xh", _read_instruction);
 
-    _mutex->lock();
+    _mutex.lock();
 
     // Configure Bus for Reading
     _qspi_configure_format(_inst_width, _address_width, _address_size, QSPI_CFG_BUS_SINGLE,
@@ -269,7 +265,7 @@ int QSPIFBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
     _qspi_configure_format(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
                            QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
 
-    _mutex->unlock();
+    _mutex.unlock();
     return status;
 
 }
@@ -293,7 +289,7 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
         chunk = (offset + size < _page_size_bytes) ? size : (_page_size_bytes - offset);
         writtenBytes = chunk;
 
-        _mutex->lock();
+        _mutex.lock();
 
         //Send WREN
         if (_set_write_enable() != 0) {
@@ -321,14 +317,14 @@ int QSPIFBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size
             status = QSPIF_BD_ERROR_READY_FAILED;
             goto exit_point;
         }
-        _mutex->unlock();
+        _mutex.unlock();
 
 
     }
 
 exit_point:
     if (program_failed) {
-        _mutex->unlock();
+        _mutex.unlock();
     }
 
     return status;
@@ -365,7 +361,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
         tr_debug("DEBUG: erase - Region: %d, Type:%d",
                  region, type);
 
-        _mutex->lock();
+        _mutex.lock();
 
         if (_set_write_enable() != 0) {
             tr_error("ERROR: QSPI Erase Device not ready - failed");
@@ -397,12 +393,12 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t inSize)
             goto exit_point;
         }
 
-        _mutex->unlock();
+        _mutex.unlock();
     }
 
 exit_point:
     if (erase_failed) {
-        _mutex->unlock();
+        _mutex.unlock();
     }
 
     return status;
