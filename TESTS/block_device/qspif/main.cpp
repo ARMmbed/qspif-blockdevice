@@ -42,12 +42,8 @@ static SingletonPtr<PlatformMutex> _mutex;
 // Mutex is protecting rand() per srand for buffer writing and verification.
 // Mutex is also protecting printouts for clear logs.
 // Mutex is NOT protecting Block Device actions: erase/program/read - which is the purpose of the multithreaded test!
-void basic_erase_program_read_test(
-    QSPIFBlockDevice& blockD,
-    bd_size_t block_size,
-    uint8_t *write_block,
-    uint8_t *read_block,
-    unsigned addrwidth)
+void basic_erase_program_read_test(QSPIFBlockDevice& blockD, bd_size_t block_size, uint8_t *write_block,
+                                   uint8_t *read_block, unsigned addrwidth)
 {
     int err = 0;
     _mutex->lock();

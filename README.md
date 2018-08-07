@@ -13,7 +13,7 @@ https://www.jedec.org/system/files/docs/JESD216B.pdf
 #include "mbed.h"
 #include "QSPIFBlockDevice.h"
 
-QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0,MBED_CONF_QSPIF_QSPI_IO1,MBED_CONF_QSPIF_QSPI_IO2,MBED_CONF_QSPIF_QSPI_IO3,
+QSPIFBlockDevice block_device(MBED_CONF_QSPIF_QSPI_IO0,MBED_CONF_QSPIF_QSPI_IO1,MBED_CONF_QSPIF_QSPI_IO2,MBED_CONF_QSPIF_QSPI_IO3,
 		MBED_CONF_QSPIF_QSPI_CLK,MBED_CONF_QSPIF_QSPI_CS,0,MBED_CONF_QSPIF_QSPI_FREQ);
 
 
@@ -21,26 +21,26 @@ int main() {
     printf("QSPI SFDP Flash Block Device example\n");
 
     // Initialize the SPI flash device and print the memory layout
-    blockD.init();
-    bd_size_t sector_size_at_address_0 = blockD.get_erase_size(0);
+    block_device.init();
+    bd_size_t sector_size_at_address_0 = block_device.get_erase_size(0);
 
-    printf("QSPIF BD size: %llu\n",         blockD.size());
-    printf("QSPIF BD read size: %llu\n",    blockD.get_read_size());
-    printf("QSPIF BD program size: %llu\n", blockD.get_program_size());
+    printf("QSPIF BD size: %llu\n",         block_device.size());
+    printf("QSPIF BD read size: %llu\n",    block_device.get_read_size());
+    printf("QSPIF BD program size: %llu\n", block_device.get_program_size());
 
     printf("QSPIF BD erase size (at address 0): %llu\n", sector_size_at_address_0);
 
     // Write "Hello World!" to the first block
     char *buffer = (char*) malloc(sector_size_at_address_0);
     sprintf(buffer, "Hello World!\n");
-    blockD.erase(0, sector_size_at_address_0);
-    blockD.program(buffer, 0, sector_size_at_address_0);
+    block_device.erase(0, sector_size_at_address_0);
+    block_device.program(buffer, 0, sector_size_at_address_0);
 
     // Read back what was stored
-    blockD.read(buffer, 0, sector_size_at_address_0);
+    block_device.read(buffer, 0, sector_size_at_address_0);
     printf("%s", buffer);
 
     // Deinitialize the device
-    blockD.deinit();
+    block_device.deinit();
 }
 ```
