@@ -67,6 +67,7 @@
 // Erase Types Per Region BitMask
 #define ERASE_BITMASK_TYPE4 0x08
 #define ERASE_BITMASK_TYPE1 0x01
+#define ERASE_BITMASK_NONE  0x00
 #define ERASE_BITMASK_ALL   0x0F
 
 #define IS_MEM_READY_MAX_RETRIES 1000
@@ -318,7 +319,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t in_size)
     int type = 0;
     uint32_t chunk = 4096;
     unsigned int cur_erase_inst = _erase_instruction;
-    int size = (int)inSize;
+    int size = (int)in_size;
     bool erase_failed = false;
     int status = QSPIF_BD_ERROR_OK;
     // Find region of erased address
@@ -326,7 +327,7 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t in_size)
     // Erase Types of selected region
     uint8_t bitfield = _region_erase_types_bitfield[region];
 
-    tr_debug("DEBUG: erase - addr: %llu, inSize: %llu", addr, in_size);
+    tr_debug("DEBUG: erase - addr: %llu, in_size: %llu", addr, in_size);
 
     // For each iteration erase the largest section supported by current region
     while (size > 0) {
