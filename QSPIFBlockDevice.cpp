@@ -142,7 +142,7 @@ int QSPIFBlockDevice::init()
     }
 
     /* Read Manufacturer ID (1byte), and Device ID (2bytes)*/
-    qspi_status = _qspi_send_read_command(QSPIF_RDID, (char *)vendor_device_ids, 0x0 /*address*/, data_length);
+    qspi_status = _qspi_send_general_command(QSPIF_RDID, -1, NULL, 0, (char *)vendor_device_ids, data_length);
     if (qspi_status != QSPI_STATUS_OK) {
         tr_error("ERROR: init - Read Vendor ID Failed");
         status = QSPIF_BD_ERROR_DEVICE_ERROR;
