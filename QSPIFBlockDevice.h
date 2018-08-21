@@ -16,8 +16,9 @@
 #ifndef MBED_QSPIF_BLOCK_DEVICE_H
 #define MBED_QSPIF_BLOCK_DEVICE_H
 
-#include <QSPI.h>
+#include "QSPI.h"
 #include "BlockDevice.h"
+
 
 namespace mbed {
 
@@ -31,9 +32,8 @@ enum qspif_bd_error {
     QSPIF_BD_ERROR_PARSING_FAILED     = -4002, /* SFDP Parsing failed */
     QSPIF_BD_ERROR_READY_FAILED		  = -4003, /* Wait for  Mem Ready failed */
     QSPIF_BD_ERROR_WREN_FAILED        = -4004, /* Write Enable Failed */
-
+    QSPIF_BD_ERROR_DEVICE_NOT_UNIQE   = -4005 /* Only one instance per csel is allowed */
 };
-
 
 /** Enum qspif polarity mode
  *
@@ -44,9 +44,9 @@ enum qspif_polarity_mode {
     QSPIF_POLARITY_MODE_1      /* CPOL=1, CPHA=1 */
 };
 
-
 #define QSPIF_MAX_REGIONS	10
 #define MAX_NUM_OF_ERASE_TYPES 4
+#define QSPIF_MAX_ACTIVE_FLASH_DEVICES 10
 
 class QSPIFBlockDevice : public BlockDevice {
 public:
@@ -164,6 +164,17 @@ public:
 private:
     // Internal functions
 
+
+    /********************************/
+    /*   Different Device Csel Mgmt */
+    /********************************/
+    // Add a new QSPI device CS to existing devices list.
+    // Only one QSPIFBlockDevice instance per CS is allowed
+    int add_new_csel_instance(PinName csel);
+
+    // Remove device CS from existing device list upon destroying object (last deinit is called)
+    int remove_csel_instance(PinName csel);
+
     /********************************/
     /*   Calls to QSPI Driver APIs  */
     /********************************/
@@ -187,7 +198,7 @@ private:
                                          int dummy_cycles);
 
     // Send set_frequency command to Driver
-    qspi_status_t _qsp_set_frequency(int freq);
+    qspi_status_t _qspi_set_frequency(int freq);
     /********************************/
 
 
@@ -214,8 +225,8 @@ private:
     int _sfdp_parse_sector_map_table(uint32_t sector_map_table_addr, size_t sector_map_table_size);
 
     // Detect fastest read Bus mode supported by device
-    int _sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table_ptr, bool& set_quad_enable, bool& is_qpi_mode,
-                                        unsigned int& read_inst);
+    int _sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table_ptr, int basic_param_table_size, bool& set_quad_enable,
+                                        bool& is_qpi_mode, unsigned int& read_inst);
 
     // Enable Quad mode if supported (1-1-4, 1-4-4, 4-4-4 bus modes)
     int _sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr);
@@ -224,10 +235,11 @@ private:
     int _sfdp_set_qpi_enabled(uint8_t *basic_param_table_ptr);
 
     // Set Page size for program
-    int _sfdp_detect_page_size(uint8_t *basic_param_table_ptr);
+    int _sfdp_detect_page_size(uint8_t *basic_param_table_ptr, int basic_param_table_size);
 
     // Detect all supported erase types
-    int _sfdp_detect_erase_types_inst_and_size(uint8_t *basic_param_table_ptr, unsigned int& erase4k_inst,
+    int _sfdp_detect_erase_types_inst_and_size(uint8_t *basic_param_table_ptr, int basic_param_table_size,
+            unsigned int& erase4k_inst,
             unsigned int *erase_type_inst_arr, unsigned int *erase_type_size_arr);
 
     /* Utilities Functions */
@@ -245,7 +257,15 @@ private:
     // QSPI Driver Object
     QSPI _qspi;
 
-    bool _is_initialized;
+    // Static List of different QSPI based Flash devices csel that already exist
+    // Each QSPI Flash device csel can have only 1 QSPIFBlockDevice instance
+    // _devices_mutex is used to lock csel list - only one QSPIFBlockDevice instance per csel is allowed
+    static SingletonPtr<PlatformMutex> _devices_mutex;
+    static int _number_of_active_qspif_flash_csel;
+    static PinName *_active_qspif_flash_csel_arr;
+
+    int _unique_device_status;
+    PinName _csel;
 
     // Mutex is used to protect Flash device for some QSPI Driver commands that must be done sequentially with no other commands in between
     // e.g. (1)Set Write Enable, (2)Program, (3)Wait Memory Ready
@@ -267,9 +287,9 @@ private:
     bd_size_t _region_high_boundary[QSPIF_MAX_REGIONS]; //region high address offset boundary
     //Each Region can support a bit combination of any of the 4 Erase Types
     uint8_t _region_erase_types_bitfield[QSPIF_MAX_REGIONS];
-    int _min_common_erase_size; // minimal common erase size for all regions (0 if none exists)
+    unsigned int _min_common_erase_size; // minimal common erase size for all regions (0 if none exists)
 
-    int _page_size_bytes; // Page size - 256 Bytes default
+    unsigned int _page_size_bytes; // Page size - 256 Bytes default
     bd_size_t _device_size_bytes;
 
     // Bus speed configuration
@@ -279,7 +299,8 @@ private:
     qspi_bus_width_t _data_width; //Bus width for Data phase
     int _dummy_and_mode_cycles; // Number of Dummy and Mode Bits required by Current Bus Mode
 
-
+    uint32_t _init_ref_count;
+    bool _is_initialized;
 };
 
 } //namespace mbed
