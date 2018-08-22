@@ -20,6 +20,7 @@
 
 #include "mbed_trace.h"
 #define TRACE_GROUP "QSPIF"
+using namespace mbed;
 
 /* Default QSPIF Parameters */
 /****************************/
@@ -73,8 +74,6 @@
 #define ERASE_BITMASK_ALL   0x0F
 
 #define IS_MEM_READY_MAX_RETRIES 10000
-
-namespace mbed {
 
 enum qspif_default_instructions {
     QSPIF_NOP  = 0x00, // No operation
@@ -1306,7 +1305,6 @@ static int local_math_power(int base, int exp)
     return result;
 }
 
-} //namespace mbed
 
 
 
