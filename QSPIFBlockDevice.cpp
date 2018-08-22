@@ -105,43 +105,30 @@ PinName *QSPIFBlockDevice::_active_qspif_flash_csel_arr = generate_initialized_a
 /****************************************/
 QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
                                    qspif_polarity_mode clock_mode, int freq)
-    : _qspi(io0, io1, io2, io3, sclk, csel, clock_mode), _csel(csel), _device_size_bytes(0), _init_ref_count(0),
+    : _qspi(io0, io1, io2, io3, sclk, csel, clock_mode), _csel(csel), _freq(freq), _device_size_bytes(0),
+      _init_ref_count(0),
       _is_initialized(false)
 {
-
     _unique_device_status = add_new_csel_instance(csel);
     if (_unique_device_status == 0) {
-        _min_common_erase_size = 0;
-        _regions_count = 1;
-        _region_erase_types_bitfield[0] = ERASE_BITMASK_NONE;
-
-        //Default Bus Setup 1_1_1 with 0 dummy and mode cycles
-        _inst_width = QSPI_CFG_BUS_SINGLE;
-        _address_width = QSPI_CFG_BUS_SINGLE;
-        _address_size = QSPI_CFG_ADDR_SIZE_24;
-        _data_width = QSPI_CFG_BUS_SINGLE;
-        _dummy_and_mode_cycles = 0;
-
-        if (QSPI_STATUS_OK != _qspi_set_frequency(freq)) {
-            tr_error("ERROR: QSPI Set Frequency Failed");
-        }
+        tr_info("INFO: Adding a new QSPIFBlockDevice csel: %d", (int)csel);
     } else if (_unique_device_status == -1) {
         tr_error("ERROR: QSPIFBlockDevice with the same csel(%d) already exists", (int)csel);
     } else {
         tr_error("ERROR: Too many different QSPIFBlockDevice devices - max allowed: %d", QSPIF_MAX_ACTIVE_FLASH_DEVICES);
     }
-
 }
 
 int QSPIFBlockDevice::init()
 {
-
-    if (_unique_device_status == -1) {
+    if (_unique_device_status == 0) {
+        tr_debug("DEBUG: QSPIFBlockDevice csel: %d", (int)_csel);
+    } else if (_unique_device_status == -1) {
         tr_error("ERROR: QSPIFBlockDevice with the same csel(%d) already exists", (int)_csel);
         return QSPIF_BD_ERROR_DEVICE_NOT_UNIQE;
-    } else if (_unique_device_status == -2) {
+    } else {
         tr_error("ERROR: Too many different QSPIFBlockDevice devices - max allowed: %d", QSPIF_MAX_ACTIVE_FLASH_DEVICES);
-        return QSPIF_BD_ERROR_DEVICE_NOT_UNIQE;
+        return QSPIF_BD_ERROR_DEVICE_MAX_EXCEED;
     }
 
     uint8_t vendor_device_ids[4];
@@ -162,6 +149,24 @@ int QSPIFBlockDevice::init()
     _init_ref_count++;
 
     if (_init_ref_count != 1) {
+        goto exit_point;
+    }
+
+    //Initialize parameters
+    _min_common_erase_size = 0;
+    _regions_count = 1;
+    _region_erase_types_bitfield[0] = ERASE_BITMASK_NONE;
+
+    //Default Bus Setup 1_1_1 with 0 dummy and mode cycles
+    _inst_width = QSPI_CFG_BUS_SINGLE;
+    _address_width = QSPI_CFG_BUS_SINGLE;
+    _address_size = QSPI_CFG_ADDR_SIZE_24;
+    _data_width = QSPI_CFG_BUS_SINGLE;
+    _dummy_and_mode_cycles = 0;
+
+    if (QSPI_STATUS_OK != _qspi_set_frequency(_freq)) {
+        tr_error("ERROR: QSPI Set Frequency Failed");
+        status = QSPIF_BD_ERROR_DEVICE_ERROR;
         goto exit_point;
     }
 

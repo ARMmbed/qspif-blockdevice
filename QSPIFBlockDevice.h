@@ -32,7 +32,8 @@ enum qspif_bd_error {
     QSPIF_BD_ERROR_PARSING_FAILED     = -4002, /* SFDP Parsing failed */
     QSPIF_BD_ERROR_READY_FAILED		  = -4003, /* Wait for  Mem Ready failed */
     QSPIF_BD_ERROR_WREN_FAILED        = -4004, /* Write Enable Failed */
-    QSPIF_BD_ERROR_DEVICE_NOT_UNIQE   = -4005 /* Only one instance per csel is allowed */
+    QSPIF_BD_ERROR_DEVICE_NOT_UNIQE   = -4005, /* Only one instance per csel is allowed */
+    QSPIF_BD_ERROR_DEVICE_MAX_EXCEED  = -4006 /* Max active QSPIF devices exceeded */
 };
 
 /** Enum qspif polarity mode
@@ -290,6 +291,7 @@ private:
     unsigned int _min_common_erase_size; // minimal common erase size for all regions (0 if none exists)
 
     unsigned int _page_size_bytes; // Page size - 256 Bytes default
+    int _freq;
     bd_size_t _device_size_bytes;
 
     // Bus speed configuration
