@@ -29,6 +29,9 @@ using namespace mbed;
 #define QSPIF_DEFAULT_PAGE_SIZE  256
 #define QSPIF_DEFAULT_SE_SIZE    4096
 #define QSPI_MAX_STATUS_REGISTER_SIZE 2
+#ifndef UINT64_MAX
+#define UINT64_MAX -1
+#endif
 #define QSPI_NO_ADDRESS_COMMAND UINT64_MAX
 // Status Register Bits
 #define QSPIF_STATUS_BIT_WIP	0x1 //Write In Progress
@@ -668,7 +671,10 @@ int QSPIFBlockDevice::_sfdp_parse_basic_param_table(uint32_t basic_table_addr, s
     if (true == shouldSetQuadEnable) {
         // Set Quad Enable and QPI Bus modes if Supported
         tr_info("INFO: init - Setting Quad Enable");
-        _sfdp_set_quad_enabled(param_table);
+        if (0 != _sfdp_set_quad_enabled(param_table)) {
+            tr_error("ERROR: Device supports Quad bus, but Quad Enable Failed");
+            return -1;
+        }
         if (true == is_qpi_mode) {
             tr_info("INFO: init - Setting QPI mode");
             _sfdp_set_qpi_enabled(param_table);
