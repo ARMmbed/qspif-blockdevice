@@ -30,7 +30,7 @@ enum qspif_bd_error {
     QSPIF_BD_ERROR_OK                 = 0,     /*!< no error */
     QSPIF_BD_ERROR_DEVICE_ERROR       = BD_ERROR_DEVICE_ERROR, /*!< device specific error -4001 */
     QSPIF_BD_ERROR_PARSING_FAILED     = -4002, /* SFDP Parsing failed */
-    QSPIF_BD_ERROR_READY_FAILED		  = -4003, /* Wait for  Mem Ready failed */
+    QSPIF_BD_ERROR_READY_FAILED       = -4003, /* Wait for  Mem Ready failed */
     QSPIF_BD_ERROR_WREN_FAILED        = -4004, /* Write Enable Failed */
     QSPIF_BD_ERROR_DEVICE_NOT_UNIQE   = -4005, /* Only one instance per csel is allowed */
     QSPIF_BD_ERROR_DEVICE_MAX_EXCEED  = -4006 /* Max active QSPIF devices exceeded */

@@ -92,9 +92,8 @@ void test_qspif_random_program_read_erase()
 {
     utest_printf("\nTest Random Program Read Erase Starts..\n");
 
-    QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0, MBED_CONF_QSPIF_QSPI_IO1, MBED_CONF_QSPIF_QSPI_IO2,
-                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0,
-                            MBED_CONF_QSPIF_QSPI_FREQ);
+    QSPIFBlockDevice blockD(QSPI_FLASH1_IO0, QSPI_FLASH1_IO1, QSPI_FLASH1_IO2, QSPI_FLASH1_IO3,
+                            QSPI_FLASH1_SCK, QSPI_FLASH1_CSN, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
 
     int err = blockD.init();
     TEST_ASSERT_EQUAL(0, err);
@@ -138,9 +137,8 @@ void test_qspif_unaligned_program()
 
     utest_printf("\nTest Unaligned Program Starts..\n");
 
-    QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0, MBED_CONF_QSPIF_QSPI_IO1, MBED_CONF_QSPIF_QSPI_IO2,
-                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0,
-                            MBED_CONF_QSPIF_QSPI_FREQ);
+    QSPIFBlockDevice blockD(QSPI_FLASH1_IO0, QSPI_FLASH1_IO1, QSPI_FLASH1_IO2, QSPI_FLASH1_IO3,
+                            QSPI_FLASH1_SCK, QSPI_FLASH1_CSN, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
 
     int err = blockD.init();
     TEST_ASSERT_EQUAL(0, err);
@@ -239,9 +237,8 @@ void test_qspif_multi_threads()
 
     utest_printf("\nTest Multi Threaded Erase/Program/Read Starts..\n");
 
-    QSPIFBlockDevice blockD(MBED_CONF_QSPIF_QSPI_IO0, MBED_CONF_QSPIF_QSPI_IO1, MBED_CONF_QSPIF_QSPI_IO2,
-                            MBED_CONF_QSPIF_QSPI_IO3, MBED_CONF_QSPIF_QSPI_CLK, MBED_CONF_QSPIF_QSPI_CS, QSPIF_POLARITY_MODE_0,
-                            MBED_CONF_QSPIF_QSPI_FREQ);
+    QSPIFBlockDevice blockD(QSPI_FLASH1_IO0, QSPI_FLASH1_IO1, QSPI_FLASH1_IO2, QSPI_FLASH1_IO3,
+                            QSPI_FLASH1_SCK, QSPI_FLASH1_CSN, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
 
     int err = blockD.init();
     TEST_ASSERT_EQUAL(0, err);
