@@ -27,7 +27,6 @@ int main() {
     printf("QSPIF BD size: %llu\n",         block_device.size());
     printf("QSPIF BD read size: %llu\n",    block_device.get_read_size());
     printf("QSPIF BD program size: %llu\n", block_device.get_program_size());
-
     printf("QSPIF BD erase size (at address 0): %llu\n", sector_size_at_address_0);
 
     // Write "Hello World!" to the first block
