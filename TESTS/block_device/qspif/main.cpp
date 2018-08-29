@@ -135,7 +135,7 @@ end:
 void test_qspif_unaligned_erase()
 {
 
-    utest_printf("\nTest Unaligned Program Starts..\n");
+    utest_printf("\nTest Unaligned Erase Starts..\n");
 
     QSPIFBlockDevice blockD(QSPI_FLASH1_IO0, QSPI_FLASH1_IO1, QSPI_FLASH1_IO2, QSPI_FLASH1_IO3,
                             QSPI_FLASH1_SCK, QSPI_FLASH1_CSN, QSPIF_POLARITY_MODE_0, MBED_CONF_QSPIF_QSPI_FREQ);
@@ -275,7 +275,7 @@ utest::v1::status_t test_setup(const size_t number_of_cases)
 }
 
 Case cases[] = {
-    Case("Testing unaligned program blocks", test_qspif_unaligned_erase),
+    Case("Testing unaligned erase blocks", test_qspif_unaligned_erase),
     Case("Testing read write random blocks", test_qspif_random_program_read_erase),
     Case("Testing Multi Threads Erase Program Read", test_qspif_multi_threads)
 };
