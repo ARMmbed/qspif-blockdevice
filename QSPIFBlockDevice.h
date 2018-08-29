@@ -164,6 +164,7 @@ public:
      *                  QSPIF_BD_ERROR_READY_FAILED - Waiting for Memory ready failed or timed out
      *                  QSPIF_BD_ERROR_WREN_FAILED - Write Enable failed
      *                  QSPIF_BD_ERROR_PARSING_FAILED - unexpected format or values in one of the SFDP tables
+     *                  QSPIF_BD_ERROR_INVALID_ERASE_PARAMS - Trying to erase unaligned address or size
      */
     virtual int erase(bd_addr_t addr, bd_size_t size);
 
