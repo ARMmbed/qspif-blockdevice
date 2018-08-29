@@ -387,6 +387,16 @@ int QSPIFBlockDevice::erase(bd_addr_t addr, bd_size_t in_size)
 
     tr_debug("DEBUG: erase - addr: %llu, in_size: %llu", addr, in_size);
 
+    if ((addr + in_size) > _device_size_bytes) {
+        tr_error("ERROR: erase exceeds flash device size");
+        return QSPIF_BD_ERROR_INVALID_ERASE_PARAMS;
+    }
+
+    if ( ((addr % get_erase_size(addr)) != 0 ) ||  (((addr + in_size) % get_erase_size(addr + in_size - 1)) != 0 ) ) {
+        tr_error("ERROR: invalid erase - unaligned address and size");
+        return QSPIF_BD_ERROR_INVALID_ERASE_PARAMS;
+    }
+
     // For each iteration erase the largest section supported by current region
     while (size > 0) {
 
