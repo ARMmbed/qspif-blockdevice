@@ -104,8 +104,7 @@ public:
      *
      */
     QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
-                     qspif_polarity_mode clock_mode,
-                     int freq = 40000000);
+                     int clock_mode, int freq = 40000000);
 
 
     /** Initialize a block device

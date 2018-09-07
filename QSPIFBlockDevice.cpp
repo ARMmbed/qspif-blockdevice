@@ -107,7 +107,7 @@ PinName *QSPIFBlockDevice::_active_qspif_flash_csel_arr = generate_initialized_a
 /********* Public API Functions *********/
 /****************************************/
 QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
-                                   qspif_polarity_mode clock_mode, int freq)
+                                   int clock_mode, int freq)
     : _qspi(io0, io1, io2, io3, sclk, csel, clock_mode), _csel(csel), _freq(freq), _device_size_bytes(0),
       _init_ref_count(0),
       _is_initialized(false)
