@@ -1,20 +1,50 @@
 {
 "name": "qspif",
     "config": {
-        "QSPI_FREQ": "40000000"
+        "QSPI_FREQ": "40000000",
+        "QSPI_IO0": "NC",
+        "QSPI_IO1": "NC",
+        "QSPI_IO2": "NC",
+        "QSPI_IO3": "NC",
+        "QSPI_CLK": "NC",
+        "QSPI_CS": "NC"
     },
     "target_overrides": {
         "DISCO_F413ZH": {
-             "QSPI_FREQ": "80000000"
+             "QSPI_FREQ": "80000000",
+             "QSPI_IO0": "PF_8",
+             "QSPI_IO1": "PF_9",
+             "QSPI_IO2": "PE_2",
+             "QSPI_IO3": "PD_13",
+             "QSPI_CLK": "PB_2",
+             "QSPI_CS": "PG_6"
         },
        "DISCO_L475VG_IOT01A": {
-             "QSPI_FREQ": "8000000"
+             "QSPI_FREQ": "8000000",
+             "QSPI_IO0": "PE_12",
+             "QSPI_IO1": "PE_13",
+             "QSPI_IO2": "PE_14",
+             "QSPI_IO3": "PE_15",
+             "QSPI_CLK": "PE_10",
+             "QSPI_CS": "PE_11"
         },
        "DISCO_L476VG": {
-             "QSPI_FREQ": "80000000"
+             "QSPI_FREQ": "8000000",
+             "QSPI_IO0": "PE_12",
+             "QSPI_IO1": "PE_13",
+             "QSPI_IO2": "PE_14",
+             "QSPI_IO3": "PE_15",
+             "QSPI_CLK": "PE_10",
+             "QSPI_CS": "PE_11"
         },
        "DISCO_F469NI": {
-             "QSPI_FREQ": "80000000"
+             "QSPI_FREQ": "8000000",
+             "QSPI_IO0": "PF_8",
+             "QSPI_IO1": "PF_9",
+             "QSPI_IO2": "PF_7",
+             "QSPI_IO3": "PF_6",
+             "QSPI_CLK": "PF_10",
+             "QSPI_CS": "PB_6"
         }
     }
 }
