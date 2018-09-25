@@ -18,12 +18,10 @@
 #include <string.h>
 #include "mbed_wait_api.h"
 
-#define MBED_CONF_MBED_TRACE_ENABLE 0
-
-#if defined(MBED_CONF_MBED_TRACE_ENABLE) && MBED_CONF_MBED_TRACE_ENABLE
+#define MBED_CONF_MBED_TRACE_ENABLE        0
 #include "mbed_trace.h"
 #define TRACE_GROUP "QSPIF"
-#endif
+
 using namespace mbed;
 
 /* Default QSPIF Parameters */
