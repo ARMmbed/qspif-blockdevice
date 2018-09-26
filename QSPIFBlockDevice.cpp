@@ -196,6 +196,8 @@ int QSPIFBlockDevice::init()
         goto exit_point;
     }
 
+    tr_debug("Vendor device ID = 0x%x 0x%x 0x%x 0x%x \n", vendor_device_ids[0], 
+             vendor_device_ids[1], vendor_device_ids[2], vendor_device_ids[3]);
     switch (vendor_device_ids[0]) {
         case 0xbf:
             // SST devices come preset with block protection
@@ -996,9 +998,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
 
     do { // compound statement is the loop body
 
-
         if (basic_param_table_size > QSPIF_BASIC_PARAM_TABLE_QPI_READ_SUPPORT_BYTE) {
-
             examined_byte = basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_QPI_READ_SUPPORT_BYTE];
 
             if (examined_byte & 0x10) {
@@ -1008,7 +1008,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                 is_qpi_mode = true;
                 _dummy_and_mode_cycles = (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_444_READ_INST_BYTE - 1] >> 5)
                                          + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_444_READ_INST_BYTE - 1] & 0x1F);
-                tr_debug("/nRead Bus Mode set to 4-4-4, Instruction: 0x%xh", _read_instruction);
+                tr_debug("Read Bus Mode set to 4-4-4, Instruction: 0x%xh", _read_instruction);
                 //_inst_width = QSPI_CFG_BUS_QUAD;
                 _address_width = QSPI_CFG_BUS_QUAD;
                 _data_width = QSPI_CFG_BUS_QUAD;
@@ -1028,9 +1028,10 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_144_READ_INST_BYTE - 1] & 0x1F);
             _address_width = QSPI_CFG_BUS_QUAD;
             _data_width = QSPI_CFG_BUS_QUAD;
-            tr_debug("/nRead Bus Mode set to 1-4-4, Instruction: 0x%xh", _read_instruction);
+            tr_debug("Read Bus Mode set to 1-4-4, Instruction: 0x%xh", _read_instruction);
             break;
         }
+
         if (examined_byte & 0x80) {
             //  Fast Read 1-1-4 Supported
             read_inst = basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_114_READ_INST_BYTE];
@@ -1038,7 +1039,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
             _dummy_and_mode_cycles = (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_114_READ_INST_BYTE - 1] >> 5)
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_114_READ_INST_BYTE - 1] & 0x1F);
             _data_width = QSPI_CFG_BUS_QUAD;
-            tr_debug("/nRead Bus Mode set to 1-1-4, Instruction: 0x%xh", _read_instruction);
+            tr_debug("Read Bus Mode set to 1-1-4, Instruction: 0x%xh", _read_instruction);
             break;
         }
         examined_byte = basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_QPI_READ_SUPPORT_BYTE];
@@ -1049,7 +1050,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_222_READ_INST_BYTE - 1] & 0x1F);
             _address_width = QSPI_CFG_BUS_DUAL;
             _data_width = QSPI_CFG_BUS_DUAL;
-            tr_info("/nRead Bus Mode set to 2-2-2, Instruction: 0x%xh", _read_instruction);
+            tr_info("Read Bus Mode set to 2-2-2, Instruction: 0x%xh", _read_instruction);
             break;
         }
 
@@ -1061,7 +1062,7 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_122_READ_INST_BYTE - 1] & 0x1F);
             _address_width = QSPI_CFG_BUS_DUAL;
             _data_width = QSPI_CFG_BUS_DUAL;
-            tr_debug("/nRead Bus Mode set to 1-2-2, Instruction: 0x%xh", _read_instruction);
+            tr_debug("Read Bus Mode set to 1-2-2, Instruction: 0x%xh", _read_instruction);
             break;
         }
         if (examined_byte & 0x01) {
@@ -1070,10 +1071,10 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
             _dummy_and_mode_cycles = (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_112_READ_INST_BYTE - 1] >> 5)
                                      + (basic_param_table_ptr[QSPIF_BASIC_PARAM_TABLE_112_READ_INST_BYTE - 1] & 0x1F);
             _data_width = QSPI_CFG_BUS_DUAL;
-            tr_debug("/nRead Bus Mode set to 1-1-2, Instruction: 0x%xh", _read_instruction);
+            tr_debug("Read Bus Mode set to 1-1-2, Instruction: 0x%xh", _read_instruction);
             break;
         }
-        tr_debug("/nRead Bus Mode set to 1-1-1, Instruction: 0x%xh", _read_instruction);
+        tr_debug("Read Bus Mode set to 1-1-1, Instruction: 0x%xh", _read_instruction);
     } while (false);
 
     return 0;
