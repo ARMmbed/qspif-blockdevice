@@ -118,13 +118,6 @@ QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinNam
 #if defined(MBED_CONF_MBED_TRACE_ENABLE) && MBED_CONF_MBED_TRACE_ENABLE
     mbed_trace_init();
 #endif
-    if (_unique_device_status == 0) {
-        tr_info("Adding a new QSPIFBlockDevice csel: %d\n", (int)csel);
-    } else if (_unique_device_status == -1) {
-        tr_error("QSPIFBlockDevice with the same csel(%d) already exists\n", (int)csel);
-    } else {
-        tr_error("Too many different QSPIFBlockDevice devices - max allowed: %d\n", QSPIF_MAX_ACTIVE_FLASH_DEVICES);
-    }
 }
 
 int QSPIFBlockDevice::init()
