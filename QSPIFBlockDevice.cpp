@@ -1126,22 +1126,27 @@ bool QSPIFBlockDevice::_is_mem_ready()
     // Check Status Register Busy Bit to Verify the Device isn't Busy
     char status_value[QSPI_MAX_STATUS_REGISTER_SIZE];
     int retries = 0;
-    bool mem_ready = true;
+    bool mem_ready = false;
 
     do {
-        wait_ms(1);
-        retries++;
-        //Read the Status Register from device
+        // Read the Status Register from device
         memset(status_value, 0xFF, QSPI_MAX_STATUS_REGISTER_SIZE);
-        if (QSPI_STATUS_OK != _qspi_send_general_command(QSPIF_RDSR, QSPI_NO_ADDRESS_COMMAND, NULL, 0, status_value,
-                QSPI_MAX_STATUS_REGISTER_SIZE)) {   // store received values in status_value
+        if (QSPI_STATUS_OK != _qspi_send_general_command(QSPIF_RDSR, QSPI_NO_ADDRESS_COMMAND, NULL, 0,
+                 status_value, QSPI_MAX_STATUS_REGISTER_SIZE)) {   // store received values in status_value
             tr_error("Reading Status Register failed");
+            break;
         }
-    } while ( (status_value[0] & QSPIF_STATUS_BIT_WIP) != 0 && retries < IS_MEM_READY_MAX_RETRIES );
+        if ((status_value[0] & QSPIF_STATUS_BIT_WIP) == 0) {
+            mem_ready = true;
+            break;
+        } else {
+            retries++;
+            wait_us(10000);
+        }
+    } while ( retries < IS_MEM_READY_MAX_RETRIES );
 
     if ((status_value[0] & QSPIF_STATUS_BIT_WIP) != 0) {
         tr_error("_is_mem_ready FALSE: status value = 0x%x ", (int)status_value[0]);
-        mem_ready = false;
     }
     return mem_ready;
 }
