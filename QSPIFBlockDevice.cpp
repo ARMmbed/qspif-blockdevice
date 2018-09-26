@@ -1156,15 +1156,11 @@ int QSPIFBlockDevice::_set_write_enable()
     // Check Status Register Busy Bit to Verify the Device isn't Busy
     char status_value[QSPI_MAX_STATUS_REGISTER_SIZE];
     int status = -1;
+    int retries = 0;
 
     do {
         if (QSPI_STATUS_OK !=  _qspi_send_general_command(QSPIF_WREN, QSPI_NO_ADDRESS_COMMAND, NULL, 0, NULL, 0)) {
             tr_error("Sending WREN command FAILED");
-            break;
-        }
-
-        if ( false == _is_mem_ready()) {
-            tr_error("Device not ready, write failed");
             break;
         }
 
@@ -1175,12 +1171,17 @@ int QSPIFBlockDevice::_set_write_enable()
             break;
         }
 
-        if ((status_value[0] & QSPIF_STATUS_BIT_WEL) == 0) {
-            tr_error("_set_write_enable failed");
+        if ((status_value[0] & QSPIF_STATUS_BIT_WEL)) {
+            status = 0;
             break;
         }
-        status = 0;
-    } while (false);
+        retries++;
+        wait_us(10000);
+    } while (retries < IS_MEM_READY_MAX_RETRIES);
+
+    if (0 != status) {
+        tr_error("_set_write_enable failed");
+    }
     return status;
 }
 
