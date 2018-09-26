@@ -1077,41 +1077,45 @@ int QSPIFBlockDevice::_sfdp_detect_best_bus_read_mode(uint8_t *basic_param_table
 int QSPIFBlockDevice::_reset_flash_mem()
 {
     // Perform Soft Reset of the Device prior to initialization
-    int status = 0;
+    int status = QSPI_STATUS_OK;
     char status_value[QSPI_MAX_STATUS_REGISTER_SIZE] = {0};
     tr_info("_reset_flash_mem:");
-    //Read the Status Register from device
-    if (QSPI_STATUS_OK == _qspi_send_general_command(QSPIF_RDSR, QSPI_NO_ADDRESS_COMMAND, NULL, 0, status_value,
-            QSPI_MAX_STATUS_REGISTER_SIZE) ) {  // store received values in status_value
+    // Read the Status Register from device
+    status = _qspi_send_general_command(QSPIF_RDSR, QSPI_NO_ADDRESS_COMMAND, NULL, 0,
+             status_value, QSPI_MAX_STATUS_REGISTER_SIZE);
+    if (status == QSPI_STATUS_OK) {  // store received values in status_value
         tr_debug("Reading Status Register Success: value = 0x%x", (int)status_value[0]);
     } else {
-        tr_debug("Reading Status Register failed: value = 0x%x", (int)status_value[0]);
-        status = -1;
+        tr_error("Reading Status Register failed: value = 0x%x", (int)status_value[0]);
+        return status;
     }
 
-    if (0 == status) {
-        //Send Reset Enable
-        if (QSPI_STATUS_OK == _qspi_send_general_command(QSPIF_RSTEN, QSPI_NO_ADDRESS_COMMAND, NULL, 0, NULL,
-                0) ) {   // store received values in status_value
-            tr_debug("Sending RSTEN Success");
-        } else {
-            tr_error("Sending RSTEN failed");
-            status = -1;
-        }
+    // Send Reset Enable
+    status = _qspi_send_general_command(QSPIF_RSTEN, QSPI_NO_ADDRESS_COMMAND, NULL, 0, NULL, 0);
+    if (status == QSPI_STATUS_OK) {
+        tr_debug("Sending RSTEN Success");
+    } else {
+        tr_error("Sending RSTEN failed");
+        return status;
+    }
 
+    if ( false == _is_mem_ready()) {
+        tr_error("Device not ready");
+        return -1;
+    }
 
-        if (0 == status) {
-            //Send Reset
-            if (QSPI_STATUS_OK == _qspi_send_general_command(QSPIF_RST, QSPI_NO_ADDRESS_COMMAND, NULL, 0, NULL,
-                    0)) {   // store received values in status_value
-                tr_debug("Sending RST Success");
-            } else {
-                tr_error("Sending RST failed");
-                status = -1;
-            }
+    // Send Reset
+    status = _qspi_send_general_command(QSPIF_RST, QSPI_NO_ADDRESS_COMMAND, NULL, 0, NULL, 0);
+    if (status == QSPI_STATUS_OK) {
+        tr_debug("Sending RST Success");
+    } else {
+        tr_error("Sending RST failed");
+        return status;
+    }
 
-            _is_mem_ready();
-        }
+    if ( false == _is_mem_ready()) {
+        tr_error("Device not ready");
+        return -1;
     }
 
     return status;
