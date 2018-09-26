@@ -859,6 +859,10 @@ int QSPIFBlockDevice::_sfdp_set_quad_enabled(uint8_t *basic_param_table_ptr)
             break;
     }
 
+    // Configure  BUS Mode to 1_1_1 for all commands other than Read
+    _qspi_configure_format(QSPI_CFG_BUS_SINGLE, QSPI_CFG_BUS_SINGLE, QSPI_CFG_ADDR_SIZE_24, QSPI_CFG_BUS_SINGLE,
+                           QSPI_CFG_ALT_SIZE_8, QSPI_CFG_BUS_SINGLE, 0);
+
     // Read Status Register
     if (QSPI_STATUS_OK == _qspi_send_general_command(read_register_inst, QSPI_NO_ADDRESS_COMMAND, NULL, 0,
             status_reg,
