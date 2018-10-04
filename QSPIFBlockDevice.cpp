@@ -18,7 +18,10 @@
 #include <string.h>
 #include "mbed_wait_api.h"
 
+#ifndef MBED_CONF_MBED_TRACE_ENABLE
 #define MBED_CONF_MBED_TRACE_ENABLE        0
+#endif
+
 #include "mbed_trace.h"
 #define TRACE_GROUP "QSPIF"
 
@@ -115,9 +118,6 @@ QSPIFBlockDevice::QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinNam
 {
     _unique_device_status = add_new_csel_instance(csel);
 
-#if defined(MBED_CONF_MBED_TRACE_ENABLE) && MBED_CONF_MBED_TRACE_ENABLE
-    mbed_trace_init();
-#endif
     if (_unique_device_status == 0) {
         tr_info("Adding a new QSPIFBlockDevice csel: %d\n", (int)csel);
     } else if (_unique_device_status == -1) {
