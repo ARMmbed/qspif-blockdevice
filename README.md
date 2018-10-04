@@ -23,6 +23,10 @@ QSPIFBlockDevice block_device(MBED_CONF_QSPIF_QSPI_IO0,MBED_CONF_QSPIF_QSPI_IO1,
 
 
 int main() {
+
+#if defined(MBED_CONF_MBED_TRACE_ENABLE) && MBED_CONF_MBED_TRACE_ENABLE
+    mbed_trace_init();
+#endif
     printf("QSPI SFDP Flash Block Device example\n");
 
     int status = 0;
