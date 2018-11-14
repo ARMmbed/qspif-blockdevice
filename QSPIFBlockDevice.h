@@ -19,9 +19,6 @@
 #include "QSPI.h"
 #include "BlockDevice.h"
 
-
-namespace mbed {
-
 /** Enum qspif standard error codes
  *
  *  @enum qspif_bd_error
@@ -104,8 +101,7 @@ public:
      *
      */
     QSPIFBlockDevice(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, PinName csel,
-                     int clock_mode, int freq = 40000000);
-
+                     int clock_mode, int freq = MBED_CONF_QSPIF_QSPI_FREQ);
 
     /** Initialize a block device
      *
@@ -195,6 +191,17 @@ public:
      */
     virtual bd_size_t get_erase_size(bd_addr_t addr);
 
+    /** Get the value of storage byte after it was erased
+     *
+     *  If get_erase_value returns a non-negative byte value, the underlying
+     *  storage is set to that value when erased, and storage containing
+     *  that value can be programmed without another erase.
+     *
+     *  @return         The value of storage when erased, or -1 if you can't
+     *                  rely on the value of erased storage
+     */
+    virtual int get_erase_value() const;
+
     /** Get the total size of the underlying device
      *
      *  @return         Size of the underlying device in bytes
@@ -239,9 +246,10 @@ private:
 
     // Send set_frequency command to Driver
     qspi_status_t _qspi_set_frequency(int freq);
-    /********************************/
 
-
+    /*********************************/
+    /* Flash Configuration Functions */
+    /*********************************/
     // Soft Reset Flash Memory
     int _reset_flash_mem();
 
@@ -251,7 +259,10 @@ private:
     // Wait on status register until write not-in-progress
     bool _is_mem_ready();
 
+    // Enable Fast Mode - for flash chips with low power default
+    int _enable_fast_mdoe();
 
+    /****************************************/
     /* SFDP Detection and Parsing Functions */
     /****************************************/
     // Parse SFDP Headers and retrieve Basic Param and Sector Map Tables (if exist)
@@ -282,6 +293,7 @@ private:
             unsigned int& erase4k_inst,
             unsigned int *erase_type_inst_arr, unsigned int *erase_type_size_arr);
 
+    /***********************/
     /* Utilities Functions */
     /***********************/
     // Find the region to which the given offset belong to
@@ -295,7 +307,7 @@ private:
     // Internal Members
 
     // QSPI Driver Object
-    QSPI _qspi;
+    mbed::QSPI _qspi;
 
     // Static List of different QSPI based Flash devices csel that already exist
     // Each QSPI Flash device csel can have only 1 QSPIFBlockDevice instance
@@ -316,6 +328,8 @@ private:
     unsigned int _prog_instruction;
     unsigned int _erase_instruction;
     unsigned int _erase4k_inst;  // Legacy 4K erase instruction (default 0x20h)
+    unsigned int _write_register_inst; // Write status/config register instruction may vary between chips
+    unsigned int _read_register_inst; // Read status/config register instruction may vary between chips
 
     // Up To 4 Erase Types are supported by SFDP (each with its own command Instruction and Size)
     unsigned int _erase_type_inst_arr[MAX_NUM_OF_ERASE_TYPES];
@@ -344,5 +358,4 @@ private:
     bool _is_initialized;
 };
 
-} //namespace mbed
 #endif
