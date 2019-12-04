@@ -1,4 +1,8 @@
-# Quad SPI (QSPI) Flash Block Device
+# Deprecation note
+
+**This repository has been deprecated and is no longer maintained.**
+
+## Quad SPI (QSPI) Flash Block Device
 
 Block device driver for NOR based QSPI flash devices that support SFDP.
 
